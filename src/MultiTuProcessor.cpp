@@ -2,39 +2,48 @@
 #include <algorithm>
 #include <boost/filesystem.hpp>
 #include "CgStr.hpp"
+#include <climits>
+
+namespace fs = boost::filesystem;
 
 // Adapted from http://stackoverflow.com/a/15549954/2128694, user Rob Kennedy
-static bool isInDir(std::string const& dir, char const* p) {
-    namespace fs = boost::filesystem;
-    auto cdir = fs::absolute(dir);
-    auto cp = fs::absolute(p);
-    // If dir ends with "/" and isn't the root directory, then the final
-    // component returned by iterators will include "." and will interfere
-    // with the std::equal check below, so we strip it before proceeding.
-    if (cdir.filename() == ".")
-        cdir.remove_filename();
-    // We're also not interested in the file's name.
-    if(cp.has_filename())
-        cp.remove_filename();
+// dir must be an absolute path without filename component.
+static bool isInDir(fs::path const& dir, fs::path p)
+{
+    p = fs::absolute(std::move(p));
 
-    // If dir has more components than file, then file can't possibly
-    // reside in dir.
-    auto dir_len = std::distance(cdir.begin(), cdir.end());
-    auto file_len = std::distance(cp.begin(), cp.end());
-    if (dir_len > file_len)
-        return false;
-
-    // This stops checking when it reaches dir.end(), so it's OK if file
-    // has more directory components afterward. They won't be checked.
-    return std::equal(cdir.begin(), cdir.end(), cp.begin());
+    return std::mismatch(dir.begin(), dir.end(), p.begin(), p.end()).first
+        == dir.end();
 }
 
-boost::optional<synth::HighlightedFile> synth::MultiTuProcessor::prepareToProcess(CXFile f)
+
+synth::MultiTuProcessor::MultiTuProcessor(fs::path const& rootdir)
+    : m_rootdir(fs::absolute(rootdir))
+{
+    if (m_rootdir.filename() == ".")
+        m_rootdir.remove_filename();
+}
+
+bool synth::MultiTuProcessor::underRootdir(fs::path const& p) const
+{
+    return isInDir(m_rootdir, p);
+}
+
+std::pair<synth::HighlightedFile*, unsigned>
+synth::MultiTuProcessor::prepareToProcess(CXFile f)
 {
     CgStr fpath(clang_getFileName(f));
     if (!isInDir(m_rootdir, fpath.get()))
-        return {};
-    HighlightedFile r;
-    r.originalPath = fpath;
-    return r;
+        return {nullptr, UINT_MAX};
+    m_outputs.emplace_back();
+    HighlightedFile* r = &m_outputs.back();
+    r->originalPath = fpath;
+    return {r, m_outputs.size() - 1};
+}
+
+std::string synth::MultiTuProcessor::relativeUrl(
+        fs::path const& from, fs::path const& to) const
+{
+    fs::path r = fs::relative(to, from);
+    return r == "." ? std::string() : r.string();
 }

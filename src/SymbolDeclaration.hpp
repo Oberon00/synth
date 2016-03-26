@@ -4,7 +4,7 @@
 #include <string>
 
 namespace synth {
-    
+
 struct SymbolDeclaration {
     std::string usr;
     std::string filename; // TODO Make reference to reduce memory consumption.

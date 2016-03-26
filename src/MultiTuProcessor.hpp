@@ -4,40 +4,68 @@
 #include <string>
 #include <vector>
 #include <unordered_set>
+#include <cassert>
 #include <clang-c/Index.h>
 #include <unordered_map>
 #include <boost/optional.hpp>
+#include <boost/filesystem/path.hpp>
 #include "HighlightedFile.hpp"
 #include "SymbolDeclaration.hpp"
 #include "FileIdSet.hpp"
 
 namespace synth {
 
+namespace fs = boost::filesystem;
+
+struct MissingDef {
+    fs::path srcPath;
+    std::size_t hlFileIdx;
+    std::size_t markupIdx;
+};
+
 class MultiTuProcessor {
 public:
-    static MultiTuProcessor forRootdir(std::string const& rootdir_)
+    static MultiTuProcessor forRootdir(fs::path const& rootdir_)
     {
         return MultiTuProcessor(rootdir_);
     }
-    
-    boost::optional<HighlightedFile> prepareToProcess(CXFile f);
-    
+
+    bool underRootdir(fs::path const& p) const;
+
+    std::string relativeUrl(
+        fs::path const& from, fs::path const& to) const;
+
+    std::pair<HighlightedFile*, unsigned> prepareToProcess(CXFile f);
+
     std::vector<HighlightedFile> const& outputs() const
     {
         return m_outputs;
     }
-    
+
+    void registerDef(SymbolDeclaration&& def)
+    {
+        assert(def.isdef);
+        m_defs.insert({def.usr, std::move(def)});
+    }
+
+    void registerMissingDefLink(
+        std::size_t hlFileIdx,
+        std::size_t markupIdx,
+        fs::path&& src, std::string&& dstUsr)
+    {
+        m_missingDefs[dstUsr].push_back({std::move(src), hlFileIdx, markupIdx});
+    }
+
 private:
-    explicit MultiTuProcessor(std::string const& rootdir_)
-        : m_rootdir(rootdir_)
-    {}
-    
-    std::string const& m_rootdir;
+    explicit MultiTuProcessor(fs::path const& rootdir_);
+
+    fs::path m_rootdir;
     FileIdSet m_processedFiles;
     std::vector<HighlightedFile> m_outputs;
-    std::unordered_map<std::string, SymbolDeclaration> m_decls;
-};    
+    std::unordered_map<std::string, SymbolDeclaration> m_defs;
+    std::unordered_map<std::string, std::vector<MissingDef>> m_missingDefs;
+};
 
-}
+} // namespace synth
 
 #endif
