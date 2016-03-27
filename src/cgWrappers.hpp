@@ -2,22 +2,13 @@
 #define SYNTH_CGWRAPPERS_HPP_INCLUDED
 
 #include <clang-c/Index.h>
+#include <clang-c/CXCompilationDatabase.h>
 #include <boost/noncopyable.hpp>
 #include <memory>
 #include <vector>
+#include <type_traits> // remove_pointer_t
 
 namespace synth {
-
-struct DeleterForCXIndex {
-    void operator() (CXIndex cidx) const { clang_disposeIndex(cidx); }
-};
-
-struct DeleterForCXTranslationUnit {
-    void operator() (CXTranslationUnit tu) const
-    {
-        clang_disposeTranslationUnit(tu);
-    }
-};
 
 class CgTokensCleanup : private boost::noncopyable {
 public:
@@ -35,11 +26,22 @@ private:
     CXTranslationUnit m_tu;
 };
 
-using CgIdxHandle = std::unique_ptr<
-    std::remove_pointer_t<CXIndex>, DeleterForCXIndex>;
-using CgTuHandle = std::unique_ptr<
-    std::remove_pointer_t<CXTranslationUnit>, DeleterForCXTranslationUnit>;
+#define SYNTH_DEF_DELETER(t, f)               \
+    struct DeleterFor##t {                    \
+        void operator() (t v) const { f(v); } \
+    };
 
+#define SYNTH_DEF_HANDLE(n, t, delf) \
+    SYNTH_DEF_DELETER(t, delf)       \
+    using n = std::unique_ptr<       \
+        std::remove_pointer_t<t>, DeleterFor##t>;
+
+SYNTH_DEF_HANDLE(CgIdxHandle, CXIndex, clang_disposeIndex)
+SYNTH_DEF_HANDLE(CgTuHandle, CXTranslationUnit, clang_disposeTranslationUnit)
+SYNTH_DEF_HANDLE(
+    CgDbHandle, CXCompilationDatabase, clang_CompilationDatabase_dispose)
+SYNTH_DEF_HANDLE(
+    CgCmdsHandle, CXCompileCommands, clang_CompileCommands_dispose)
 } // namespace synth
 
 #endif // SYNTH_CGWRAPPERS_HPP_INCLUDED
