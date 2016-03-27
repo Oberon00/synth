@@ -52,6 +52,17 @@ static bool isTypeKind(CXCursorKind k) {
     SYNTH_DISCLANGWARN_END
 }
 
+static std::string getVarCssClasses(CXCursor cur)
+{
+    if (clang_getCursorLinkage(cur) == CXLinkage_NoLinkage)
+        return "nv"; // Name.Variable (local)
+    if (clang_getCXXAccessSpecifier(cur) == CX_CXXInvalidAccessSpecifier)
+        return "vg"; // Name.Variable.Global
+    if (clang_Cursor_getStorageClass(cur) == CX_SC_Static)
+        return "vc"; // Name.Variable.Class (static member variable)
+    return "vi"; // Name.Variable.Instance (nonstatic member variable)
+}
+
 static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu)
 {
     CXCursorKind k = clang_getCursorKind(cur);
@@ -142,8 +153,7 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
                     return "nf"; // Name.Function
 
                 case CXCursor_VarDecl:
-                    // TODO: Could distinguish globals and class from others.
-                    return "nv"; // Name.Variable
+                    return getVarCssClasses(cur);
                 case CXCursor_ParmDecl:
                     return "nv"; // Name.Variable
 
