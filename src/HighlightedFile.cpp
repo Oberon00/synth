@@ -67,17 +67,21 @@ static bool copyWithLinenosUntil(
 {
     if (lineno == 0) {
         ++lineno;
-        out << "<a id=\"L1\"></a>";
+        out << "<span id=\"L1\" class=\"Ln\">";
     }
+
     while (in && in.tellg() < offset) {
         int ch = in.get();
         if (ch == std::istream::traits_type::eof()) {
+            out << "</span>";
             return false;
         } else {
             switch (ch) {
                 case '\n':
                     ++lineno;
-                    out << "\n<a id=\"L" << std::to_string(lineno) << "\"></a>";
+                    out << "</span>\n<span id=\"L" 
+                        << std::to_string(lineno)
+                        << "\" class=\"Ln\">";
                     break;
                 case '<':
                     out << "&lt;";
