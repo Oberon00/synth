@@ -8,6 +8,7 @@ set(synth_HDRS
     "HighlightedFile.hpp"
     "MultiTuProcessor.hpp"
     "SymbolDeclaration.hpp"
+    "cgWrappers.hpp"
     "cmdline.hpp"
 )
 
