@@ -4,17 +4,20 @@
 
 set(synth_HDRS
     "CgStr.hpp"
-    "MultiTuProcessor.hpp"
-    "HighlightedFile.hpp"
-    "SymbolDeclaration.hpp"
     "FileIdSet.hpp"
+    "HighlightedFile.hpp"
+    "MultiTuProcessor.hpp"
+    "SymbolDeclaration.hpp"
+    "cmdline.hpp"
 )
 
 set(synth_SRCS
-    "MultiTuProcessor.cpp"
     "HighlightedFile.cpp"
-    "xref.cpp"
+    "MultiTuProcessor.cpp"
+    "annotate.cpp"
+    "cmdline.cpp"
     "main.cpp"
+    "xref.cpp"
 )
 
 set(CMAKE_DEBUG_POSTFIX "-d")

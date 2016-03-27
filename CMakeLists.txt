@@ -56,6 +56,8 @@ else()
         add_definitions("-Wundef")
         add_definitions("-Wswitch-default")
         add_definitions("-Wnoexcept")
+
+        add_definitions("-Wno-missing-field-initializers")
     endif()
 endif()
 
