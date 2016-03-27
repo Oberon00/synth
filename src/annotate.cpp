@@ -271,37 +271,32 @@ static void processToken(
     }
 }
 
-static void processRange(
-    MultiTuProcessor& state, CXTranslationUnit tu, CXSourceRange rng);
+namespace {
 
-static CXVisitorResult includeVisitor(void* ud, CXCursor cursor, CXSourceRange)
+struct IncVisitorData {
+    MultiTuProcessor& state;
+    CXTranslationUnit tu;
+};
+
+} // anonymous namespace
+
+static void processFile(
+    CXFile file, CXSourceLocation*, unsigned, CXClientData ud)
 {
-    auto& state = *static_cast<MultiTuProcessor*>(ud);
-    CXFile incf = clang_getIncludedFile(cursor);
-    CXTranslationUnit tu = clang_Cursor_getTranslationUnit(cursor);
+    auto& cdata = *static_cast<IncVisitorData*>(ud);
+    CXTranslationUnit tu = cdata.tu;
+    MultiTuProcessor& state = cdata.state;
 
-    CXSourceLocation beg = clang_getLocationForOffset(tu, incf, 0);
-    CXSourceLocation end = clang_getLocation(tu, incf, UINT_MAX, UINT_MAX);
+    CXSourceLocation beg = clang_getLocationForOffset(tu, file, 0);
+    CXSourceLocation end = clang_getLocation(tu, file, UINT_MAX, UINT_MAX);
 
-    processRange(state, tu, clang_getRange(beg, end));
-
-    return CXVisit_Continue;
-}
-
-static void processRange(
-    MultiTuProcessor& state, CXTranslationUnit tu, CXSourceRange rng)
-{
-    CXSourceLocation cloc = clang_getRangeStart(rng);
-    CXFile cfile;
-
-    clang_getFileLocation(cloc, &cfile, nullptr, nullptr, nullptr);
-    auto output = state.prepareToProcess(cfile);
+    auto output = state.prepareToProcess(file);
     if (!output.first)
         return;
 
     CXToken* tokens;
     unsigned numTokens;
-    clang_tokenize(tu, rng, &tokens, &numTokens);
+    clang_tokenize(tu, clang_getRange(beg, end), &tokens, &numTokens);
     CgTokensCleanup tokCleanup(tokens, numTokens, tu);
 
     if (numTokens > 0) {
@@ -313,8 +308,7 @@ static void processRange(
         }
     }
     std::cout << "Processed " << numTokens << " tokens in "
-              << CgStr(clang_getFileName(cfile)).gets() << '\n';
-    clang_findIncludesInFile(tu, cfile, {&state, &includeVisitor});
+              << CgStr(clang_getFileName(file)).gets() << '\n';
 }
 
 int synth::processTu(
@@ -326,7 +320,7 @@ int synth::processTu(
     CXTranslationUnit tu = nullptr;
     CXErrorCode err = clang_parseTranslationUnit2FullArgv(
         cidx,
-        /*filename:*/nullptr, // In commandline.
+        /*source_filename:*/ nullptr, // Included in commandline.
         args,
         nargs,
         /*unsaved_files:*/ nullptr,
@@ -345,8 +339,7 @@ int synth::processTu(
         return err + 10;
     }
 
-    CXCursor rootcur = clang_getTranslationUnitCursor(tu);
-    processRange(state, tu, clang_getCursorExtent(rootcur));
-    //clang_visitChildren(rootcur, &tuVisitor, &state);
+    IncVisitorData ud {state, tu};
+    clang_getInclusions(tu, &processFile, &ud);
     return EXIT_SUCCESS;
 }
