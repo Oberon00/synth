@@ -21,6 +21,37 @@ static CgStr getCursorFilename(CXCursor c)
     return clang_getFileName(f);
 }
 
+static bool isTypeKind(CXCursorKind k) {
+    SYNTH_DISCLANGWARN_BEGIN("-Wswitch-enum")
+    switch (k) {
+        case CXCursor_ClassDecl:
+        case CXCursor_ClassTemplate:
+        case CXCursor_ClassTemplatePartialSpecialization:
+        case CXCursor_StructDecl:
+        case CXCursor_UnionDecl:
+        case CXCursor_EnumDecl:
+        case CXCursor_TypedefDecl:
+        case CXCursor_ObjCInterfaceDecl:
+        case CXCursor_ObjCCategoryDecl:
+        case CXCursor_ObjCProtocolDecl:
+        case CXCursor_ObjCImplementationDecl:
+        case CXCursor_TemplateTypeParameter:
+        case CXCursor_TemplateTemplateParameter:
+        case CXCursor_TypeAliasDecl:
+        case CXCursor_TypeAliasTemplateDecl:
+        case CXCursor_TypeRef:
+        case CXCursor_ObjCSuperClassRef:
+        case CXCursor_ObjCProtocolRef:
+        case CXCursor_ObjCClassRef:
+        case CXCursor_CXXBaseSpecifier:
+            return true;
+
+        default:
+            return false;
+    }
+    SYNTH_DISCLANGWARN_END
+}
+
 static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu)
 {
     CXCursorKind k = clang_getCursorKind(cur);
@@ -75,25 +106,17 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
             return "k";
 
         case CXToken_Identifier:
+            if (isTypeKind(k))
+                return "nc"; // Name.Class
             SYNTH_DISCLANGWARN_BEGIN("-Wswitch-enum")
             switch (k) {
-                case CXCursor_ClassDecl:
-                case CXCursor_ClassTemplate:
-                case CXCursor_ClassTemplatePartialSpecialization:
-                case CXCursor_StructDecl:
-                case CXCursor_UnionDecl:
-                case CXCursor_EnumDecl:
-                case CXCursor_TypedefDecl:
-                case CXCursor_ObjCInterfaceDecl:
-                case CXCursor_ObjCCategoryDecl:
-                case CXCursor_ObjCProtocolDecl:
-                case CXCursor_ObjCImplementationDecl:
-                case CXCursor_TemplateTypeParameter:
-                case CXCursor_TemplateTemplateParameter:
-                case CXCursor_TypeAliasDecl:
-                case CXCursor_TypeAliasTemplateDecl:
-                case CXCursor_TypeRef:
-                    return "nc"; // Name.Class
+                case CXCursor_MemberRef:
+                case CXCursor_DeclRefExpr:
+                case CXCursor_MemberRefExpr:
+                case CXCursor_TemplateRef: {
+                    CXCursor refd = clang_getCursorReferenced(cur);
+                    return getCssClasses(tok, refd, tu);
+                }
 
                 case CXCursor_ObjCPropertyDecl:
                     return "py"; // Name.Variable.Property
@@ -114,6 +137,7 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
                 case CXCursor_Constructor:
                 case CXCursor_Destructor:
                 case CXCursor_ConversionFunction:
+                case CXCursor_OverloadedDeclRef:
                     return "nf"; // Name.Function
 
                 case CXCursor_VarDecl:
@@ -170,6 +194,7 @@ static void processToken(
     CgStr srcFname(clang_getFileName(file)); // TODO? make relative to root
     m.attrs.insert({"class", getCssClasses(tok, cur, tu)});
 
+
     CXTokenKind tk = clang_getTokenKind(tok);
     if (tk == CXToken_Comment || tk == CXToken_Literal)
         return;
@@ -200,6 +225,9 @@ static void processToken(
             out.markups.push_back(std::move(im));
         return;
     }
+
+    // std::cout << CgStr(clang_getTokenSpelling(tu, tok)).gets()
+    //     << " " << CgStr(clang_getCursorKindSpelling(k)).gets() << '\n';
 
     // clang_isReference() sometimes reports false negatives, e.g. for
     // overloaded operators, so check manually.
