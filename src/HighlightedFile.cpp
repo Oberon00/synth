@@ -1,30 +1,37 @@
 #include "HighlightedFile.hpp"
 #include <utility>
+#include <fstream>
+#include <climits>
+#include <iostream>
 
-synth::PrimitiveTag synth::Markup::begin_tag() const
+using namespace synth;
+
+PrimitiveTag Markup::begin_tag() const
 {
     std::string content("<");
     content += tag;
-    content += ' ';
     for (auto const& kv : attrs) {
+        content += ' ';
         content += kv.first;
         content += "=\"";
         content += kv.second; // TODO? Escape?
-        content += "\">";
+        content += '"';
     }
+    content += '>';
     return {begin_offset, content};
 }
 
-synth::PrimitiveTag synth::Markup::end_tag() const
+PrimitiveTag Markup::end_tag() const
 {
-    return {end_offset, std::string("<") + tag + ">"};
+    return {end_offset, std::string("</") + tag + ">"};
 }
 
-std::vector<synth::PrimitiveTag> synth::HighlightedFile::flatten() const
+static std::vector<PrimitiveTag> flatten(
+    std::vector<Markup> const& sortedMarkups)
 {
     std::vector<PrimitiveTag> r;
     std::vector<PrimitiveTag> pendingEnds;
-    for (auto const& m : markups) {
+    for (auto const& m : sortedMarkups) {
         while (!pendingEnds.empty()
             && m.begin_offset >= pendingEnds.back().offset
         ) {
@@ -41,4 +48,72 @@ std::vector<synth::PrimitiveTag> synth::HighlightedFile::flatten() const
         r.push_back(*rit);
 
     return r;
+}
+
+void HighlightedFile::prepareOutput()
+{
+    // ORDER BY begin_offset ASC, end_offset DESC
+    std::sort(
+        markups.begin(), markups.end(),
+        [] (Markup const& lhs, Markup const& rhs) {
+            return lhs.begin_offset != rhs.begin_offset
+                ? lhs.begin_offset < rhs.begin_offset
+                : lhs.end_offset > rhs.end_offset;
+        });
+}
+
+static bool copyWithLinenosUntil(
+    std::istream& in, std::ostream& out, unsigned& lineno, unsigned offset)
+{
+    if (lineno == 0) {
+        ++lineno;
+        out << "<a id=\"L1\"></a>";
+    }
+    while (in && in.tellg() < offset) {
+        int ch = in.get();
+        if (ch == std::istream::traits_type::eof()) {
+            return false;
+        } else {
+            switch (ch) {
+                case '\n':
+                    ++lineno;
+                    out << "\n<a id=\"L" << std::to_string(lineno) << "\"></a>";
+                    break;
+                case '<':
+                    out << "&lt;";
+                    break;
+                case '>':
+                    out << "&gt;";
+                    break;
+                case '&':
+                    out << "&amp;";
+                    break;
+                default:
+                    out.put(static_cast<char>(ch));
+            }
+        }
+    }
+    return true;
+}
+
+void HighlightedFile::writeTo(std::ostream& out) const
+{
+    std::ifstream in(originalPath);
+    if (!in)
+        throw std::runtime_error("Could not reopen source " + originalPath);
+    auto hls = flatten(markups);
+    unsigned lineno = 0;
+    out << "<code><pre>\n";
+    bool eof;
+    for (auto const& hl : hls) {
+        eof = !copyWithLinenosUntil(in, out, lineno, hl.offset);
+        if (eof) {
+            std::cerr << "target offset " << hl.offset << " for " << hl.content << "\n";
+            throw std::runtime_error("unexpected EOF in " + originalPath);
+        }
+        out << hl.content;
+    }
+    eof = !copyWithLinenosUntil(in, out, lineno, UINT_MAX);
+    assert(eof);
+    out << "\n</pre></code>\n";
 }

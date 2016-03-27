@@ -13,6 +13,7 @@ set(synth_HDRS
 set(synth_SRCS
     "MultiTuProcessor.cpp"
     "HighlightedFile.cpp"
+    "xref.cpp"
     "main.cpp"
 )
 

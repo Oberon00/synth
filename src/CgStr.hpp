@@ -5,7 +5,6 @@
 #include <string>
 #include <cassert>
 
-// Bla
 class CgStr {
 public:
     CgStr(CXString&& s)
@@ -23,6 +22,7 @@ public:
         m_data = std::move(other.m_data);
         other.m_data.data = nullptr; // HACK Undocumented behavior.
         assert(!other.valid());
+        return *this;
     }
 
     ~CgStr() {
@@ -31,7 +31,11 @@ public:
 
     char const* get() const { return clang_getCString(m_data); }
 
-    operator char const* () const { return get(); }
+    char const* gets() const
+    {
+        auto s = get();
+        return s ? s : "";
+    }
 
     std::string copy() const
     {

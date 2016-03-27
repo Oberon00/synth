@@ -4,8 +4,12 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <boost/filesystem/path.hpp>
+#include <iosfwd>
 
 namespace synth {
+
+namespace fs = boost::filesystem;
 
 struct PrimitiveTag {
     unsigned offset;
@@ -29,7 +33,10 @@ struct HighlightedFile {
     std::string originalPath;
     std::vector<Markup> markups;
 
-    std::vector<PrimitiveTag> flatten() const;
+    // May invalidate references and indexes into markups.
+    void prepareOutput();
+
+    void writeTo(std::ostream& out) const;
 };
 
 }

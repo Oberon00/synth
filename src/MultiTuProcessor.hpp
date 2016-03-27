@@ -32,9 +32,6 @@ public:
 
     bool underRootdir(fs::path const& p) const;
 
-    std::string relativeUrl(
-        fs::path const& from, fs::path const& to) const;
-
     std::pair<HighlightedFile*, unsigned> prepareToProcess(CXFile f);
 
     std::vector<HighlightedFile> const& outputs() const
@@ -56,8 +53,14 @@ public:
         m_missingDefs[dstUsr].push_back({std::move(src), hlFileIdx, markupIdx});
     }
 
+    void resolveMissingRefs();
+
+    void writeOutput(fs::path const& outpath);
+
 private:
     explicit MultiTuProcessor(fs::path const& rootdir_);
+
+    Markup& markupFromMissingDef(MissingDef const& def);
 
     fs::path m_rootdir;
     FileIdSet m_processedFiles;

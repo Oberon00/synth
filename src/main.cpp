@@ -8,9 +8,11 @@
 #include <memory>
 #include <vector>
 #include <boost/filesystem/path.hpp>
+#include <climits>
 
 #include "CgStr.hpp"
 #include "MultiTuProcessor.hpp"
+#include "xref.hpp"
 
 namespace fs = boost::filesystem;
 
@@ -78,13 +80,18 @@ static CXChildVisitResult hlVisitor( CXCursor cursor, CXCursor /* parent */, CXC
 //     return CXChildVisit_Continue;
 // }
 
-static void printLoc(CXSourceLocation loc)
+static std::ostream& operator<< (std::ostream& out, CXSourceLocation const& loc)
 {
     unsigned line, col, off;
     CXFile file;
     clang_getFileLocation(loc, &file, &line, &col, &off);
     CgStr fname(clang_getFileName(file));
-    std::cout << fname.get() << ":" << line << ":" << col << "+" << off << "\n";
+    return out << fname.gets() << ":" << line << ":" << col << "+" << off;
+}
+
+static std::ostream& operator<< (std::ostream& out, CXSourceRange const& rng)
+{
+    return out << clang_getRangeStart(rng) << " - " << clang_getRangeEnd(rng);
 }
 
 struct CmdLineArgs {
@@ -94,7 +101,7 @@ struct CmdLineArgs {
     int nClangArgs;
 };
 
-static CmdLineArgs parseCmdLine(int argc, char* argv[])
+static CmdLineArgs parseCmdLine(int argc, char** argv)
 {
     if (argc < 3)
         throw std::runtime_error("Too few arguments.");
@@ -102,13 +109,13 @@ static CmdLineArgs parseCmdLine(int argc, char* argv[])
     r.rootdir = argv[1];
     bool foundCmd = false;
     for (int i = 2; i < argc; ++i) {
-        if (std::strcmp(argv[i], "-o")) {
+        if (!std::strcmp(argv[i], "-o")) {
             if (!argv[i + 1])
                 throw std::runtime_error("Missing value for -o");
             r.outdir = argv[++i];
-        } else if (std::strcmp(argv[i], "args")) {
+        } else if (!std::strcmp(argv[i], "args")) {
             r.firstClangArg = argv + i + 1;
-            r.nClangArgs = argc - i;
+            r.nClangArgs = argc - i - 1;
             foundCmd = true;
             break;
         }
@@ -187,7 +194,7 @@ static CgStr getCursorFilename(CXCursor c)
     return clang_getFileName(f);
 }
 
-static std::string getCssClasses(CXToken tok, CXCursor cur)
+static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu)
 {
     CXCursorKind k = clang_getCursorKind(cur);
     CXTokenKind tk = clang_getTokenKind(tok);
@@ -195,7 +202,11 @@ static std::string getCssClasses(CXToken tok, CXCursor cur)
         if (k == CXCursor_InclusionDirective
             && (tk == CXToken_Literal || tk == CXToken_Identifier)
         ) {
-            return "cpf";
+            CgStr spelling = clang_getTokenSpelling(tu, tok);
+            if (!std::strcmp(spelling.gets(), "cpf")
+            ) {
+                return "cpf";
+            }
         }
         return "cp";
     }
@@ -305,49 +316,6 @@ static std::string getCssClasses(CXToken tok, CXCursor cur)
     }
 }
 
-static std::string makeCursorHref(
-    CXCursor dst,
-    fs::path const& srcurl,
-    MultiTuProcessor& state,
-    bool byUsr)
-{
-    fs::path dstpath = getCursorFilename(dst).get();
-    if (!state.underRootdir(dstpath))
-        return std::string();
-    std::string url = state.relativeUrl(srcurl, dstpath);
-    url += '#';
-
-    if (byUsr) {
-        CgStr usr(clang_getCursorUSR(dst));
-        if (!usr.empty()) {
-            url += usr.get();
-            return url;
-        }
-        // else: fall back through to line-number linking.
-    }
-
-    unsigned lineno;
-    clang_getFileLocation(
-        clang_getCursorLocation(dst), nullptr, &lineno, nullptr, nullptr);
-    url += "L";
-    url += std::to_string(lineno);
-    return url;
-}
-
-static void linkCursor(
-    Markup& m,
-    CXCursor dst,
-    fs::path const& srcurl,
-    MultiTuProcessor& state,
-    bool byUsr)
-{
-    std::string dsturl = makeCursorHref(dst, srcurl, state, byUsr);
-    if (dsturl.empty())
-        return;
-    m.tag = Markup::kTagLink;
-    m.attrs["href"] = dsturl;
-}
-
 static void processToken(
     HighlightedFile& out,
     unsigned outIdx,
@@ -360,15 +328,29 @@ static void processToken(
     m.tag = Markup::kTagSpan;
     CXTranslationUnit tu = clang_Cursor_getTranslationUnit(cur);
     CXSourceRange rng = clang_getTokenExtent(tu, tok);
-
+    //std::cout << rng << ": " << CgStr(clang_getTokenSpelling(tu, tok)).gets() << '\n';
     CXFile file;
     unsigned lineno;
     clang_getFileLocation(
         clang_getRangeStart(rng), &file, &lineno, nullptr, &m.begin_offset);
     clang_getFileLocation(
         clang_getRangeEnd(rng), nullptr, nullptr, nullptr, &m.end_offset);
+    if (m.begin_offset == m.end_offset) {
+        out.markups.pop_back();
+        return;
+    }
     CgStr srcFname(clang_getFileName(file)); // TODO? make relative to root
-    m.attrs.insert({"class", getCssClasses(tok, cur)});
+    m.attrs.insert({"class", getCssClasses(tok, cur, tu)});
+
+    CXTokenKind tk = clang_getTokenKind(tok);
+    if (tk == CXToken_Comment || tk == CXToken_Literal)
+        return;
+
+    if (!clang_equalLocations(
+            clang_getRangeStart(rng), clang_getCursorLocation(cur))
+    ) {
+        return;
+    }
 
     // clang_isReference() sometimes reports false negatives, e.g. for
     // overloaded operators, so check manually.
@@ -376,19 +358,22 @@ static void processToken(
     bool isref = !clang_Cursor_isNull(referenced)
         && !clang_equalCursors(cur, referenced)
         && state.underRootdir(getCursorFilename(referenced).get());
-    if (isref)
-        linkCursor(m, referenced, srcFname.get(), state, /*byUsr:*/ false);
+    if (isref) {
+        linkCursorIfIncludedDst(
+            m, referenced, srcFname.get(), lineno, state, /*byUsr:*/ false);
+    }
 
     CXCursor defcur = clang_getCursorDefinition(cur);
     if (clang_equalCursors(defcur, cur)) { // This is a definition:
         m.attrs["class"] += " dfn";
-        SymbolDeclaration decl {
-            CgStr(clang_getCursorUSR(cur)).get(),
-            srcFname.get(),
-            lineno,
-            /*isdef=*/ true
-        };
-        if (!decl.usr.empty()) {
+        CgStr usr(clang_getCursorUSR(cur));
+        if (!usr.empty()) {
+            SymbolDeclaration decl {
+                usr.get(),
+                srcFname.get(),
+                lineno,
+                /*isdef=*/ true
+            };
             m.attrs["id"] = decl.usr; // Escape?
             state.registerDef(std::move(decl));
         }
@@ -403,26 +388,43 @@ static void processToken(
                     usr.get());
             }
         } else {
-            linkCursor(m, defcur, srcFname.get(), state, /*byUsr:*/ true);
+            linkCursorIfIncludedDst(
+                m, defcur, srcFname.get(), lineno, state, /*byUsr:*/ true);
         }
     }
 }
 
-static void processRootCursor(MultiTuProcessor& state, CXCursor cursor)
+static void processRange(
+    MultiTuProcessor& state, CXTranslationUnit tu, CXSourceRange rng);
+
+static CXVisitorResult includeVisitor(void* ud, CXCursor cursor, CXSourceRange)
 {
-    CXSourceLocation cloc = clang_getCursorLocation(cursor);
+    auto& state = *static_cast<MultiTuProcessor*>(ud);
+    CXFile incf = clang_getIncludedFile(cursor);
+    CXTranslationUnit tu = clang_Cursor_getTranslationUnit(cursor);
+
+    CXSourceLocation beg = clang_getLocationForOffset(tu, incf, 0);
+    CXSourceLocation end = clang_getLocation(tu, incf, UINT_MAX, UINT_MAX);
+
+    processRange(state, tu, clang_getRange(beg, end));
+
+    return CXVisit_Continue;
+}
+
+static void processRange(
+    MultiTuProcessor& state, CXTranslationUnit tu, CXSourceRange rng)
+{
+    CXSourceLocation cloc = clang_getRangeStart(rng);
     CXFile cfile;
+
     clang_getFileLocation(cloc, &cfile, nullptr, nullptr, nullptr);
     auto output = state.prepareToProcess(cfile);
     if (!output.first)
         return;
 
-    CXTranslationUnit tu = clang_Cursor_getTranslationUnit(cursor);
-    CXSourceRange range = clang_getCursorExtent(cursor);
-
     CXToken* tokens;
     unsigned numTokens;
-    clang_tokenize(tu, range, &tokens, &numTokens);
+    clang_tokenize(tu, rng, &tokens, &numTokens);
     CgTokens tokCleanup(tokens, numTokens, tu);
 
     if (numTokens > 0) {
@@ -433,7 +435,8 @@ static void processRootCursor(MultiTuProcessor& state, CXCursor cursor)
                 *output.first, output.second, state, tokens[i], tokCurs[i]);
         }
     }
-    clang_disposeTokens(tu, tokens, numTokens);
+    std::cout << "Processed " << numTokens << " tokens in " << CgStr(clang_getFileName(cfile)).gets() << '\n';
+    clang_findIncludesInFile(tu, cfile, {&state, &includeVisitor});
 }
 
 static int processTu(
@@ -458,7 +461,8 @@ static int processTu(
 
     CgTuHandle htu(tu);
     CXCursor rootcur = clang_getTranslationUnitCursor(tu);
-    processRootCursor(state, rootcur);
+    processRange(state, tu, clang_getCursorExtent(rootcur));
+    //clang_visitChildren(rootcur, &tuVisitor, &state);
     return EXIT_SUCCESS;
 }
 
@@ -471,7 +475,8 @@ static int executeCmdLine(CmdLineArgs const& args)
     int r = processTu(hcidx.get(), state, args.firstClangArg, args.nClangArgs);
     if (r)
         return r;
-    // TODO
+    state.resolveMissingRefs();
+    state.writeOutput(args.outdir);
     return r;
 }
 

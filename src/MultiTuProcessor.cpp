@@ -3,6 +3,9 @@
 #include <boost/filesystem.hpp>
 #include "CgStr.hpp"
 #include <climits>
+#include <fstream>
+#include <iostream>
+#include "xref.hpp"
 
 namespace fs = boost::filesystem;
 
@@ -32,18 +35,60 @@ bool synth::MultiTuProcessor::underRootdir(fs::path const& p) const
 std::pair<synth::HighlightedFile*, unsigned>
 synth::MultiTuProcessor::prepareToProcess(CXFile f)
 {
+    if (!f)
+        return {nullptr, UINT_MAX};
     CgStr fpath(clang_getFileName(f));
-    if (!isInDir(m_rootdir, fpath.get()))
+    if (fpath.empty() || !isInDir(m_rootdir, fpath.get()))
+        return {nullptr, UINT_MAX};
+    CXFileUniqueID fuid;
+    if (clang_getFileUniqueID(f, &fuid) != 0)
+        return {nullptr, UINT_MAX};
+    if (!m_processedFiles.insert(fuid).second)
         return {nullptr, UINT_MAX};
     m_outputs.emplace_back();
     HighlightedFile* r = &m_outputs.back();
-    r->originalPath = fpath;
+    r->originalPath = fpath.get();
     return {r, m_outputs.size() - 1};
 }
 
-std::string synth::MultiTuProcessor::relativeUrl(
-        fs::path const& from, fs::path const& to) const
+void synth::MultiTuProcessor::resolveMissingRefs()
 {
-    fs::path r = fs::relative(to, from);
-    return r == "." ? std::string() : r.string();
+    for (auto it = m_missingDefs.begin(); it != m_missingDefs.end(); ) {
+        auto def = m_defs.find(it->first);
+        if (def != m_defs.end()) { // Definition was resolved:
+            for (auto const& ref : it->second) {
+                Markup& m = markupFromMissingDef(ref);
+                linkSymbol(m, def->second, ref.srcPath);
+            }
+            it = m_missingDefs.erase(it);
+        } else {
+            ++it;
+        }
+
+    }
 }
+
+synth::Markup& synth::MultiTuProcessor::markupFromMissingDef(
+    synth::MissingDef const& def)
+{
+    assert(def.hlFileIdx < m_outputs.size());
+    HighlightedFile& hlFile = m_outputs[def.hlFileIdx];
+    assert(def.markupIdx < hlFile.markups.size());
+    return hlFile.markups[def.markupIdx];
+}
+
+void synth::MultiTuProcessor::writeOutput(fs::path const& outpath)
+{
+    m_missingDefs.clear(); // Will be invalidated by the below operations.
+    for (auto& hlfile : m_outputs) {
+        hlfile.prepareOutput();
+        auto hlpath = outpath / fs::relative(hlfile.originalPath, m_rootdir);
+        hlpath += ".html";
+        fs::create_directories(hlpath.parent_path());
+        std::ofstream outfile(hlpath.c_str());
+        outfile.exceptions(std::ios::badbit | std::ios::failbit);
+        hlfile.writeTo(outfile);
+        std::cout << hlpath << " written\n";
+    }
+}
+
