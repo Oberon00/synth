@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 #include <boost/filesystem/path.hpp>
+#include <boost/noncopyable.hpp>
 #include <climits>
 
 #include "CgStr.hpp"
@@ -17,82 +18,6 @@
 namespace fs = boost::filesystem;
 
 namespace synth {
-
-static char const tokenMap[] = "pkilc";
-
-
-static CXChildVisitResult hlVisitor( CXCursor cursor, CXCursor /* parent */, CXClientData /* clientData */ )
-{
-    if (!clang_Location_isFromMainFile(clang_getCursorLocation(cursor)))
-        return CXChildVisit_Continue;
-
-    CXTranslationUnit tu = clang_Cursor_getTranslationUnit(cursor);
-    CXSourceRange range = clang_getCursorExtent(cursor);
-
-
-    CXToken* tokens;
-    unsigned int numTokens;
-    clang_tokenize(tu, range, &tokens, &numTokens);
-
-    if ( numTokens > 0 ) {
-        std::vector<CXCursor> tokCurs(numTokens);
-        clang_annotateTokens(tu, tokens, numTokens, tokCurs.data());
-        for (unsigned i = 0; i < numTokens - 1; ++i) {
-            CgStr tokensp(clang_getTokenSpelling(tu,
-                tokens[i]));
-            CXSourceLocation tl = clang_getTokenLocation(tu, tokens[i]);
-
-            unsigned line, column, offset;
-            clang_getFileLocation(tl, nullptr, &line, &column, &offset);
-            CgStr usr(clang_getCursorUSR(tokCurs[i]));
-            CXCursorKind k = clang_getCursorKind(tokCurs[i]);
-            CXCursor refd = clang_isReference(k) ? clang_getCursorReferenced(tokCurs[i]) : clang_getNullCursor();
-            CgStr dname(clang_getCursorDisplayName(tokCurs[i]));
-            std::cout << tokenMap[clang_getTokenKind(tokens[i])]
-                      << " K:" << CgStr(clang_getCursorKindSpelling(k)).get()
-                      << " D:" << dname.get()
-                      << " U:" << usr.get()
-                      << ' ' << line
-                      << ':' << column
-                      << " " << tokensp.get() << "\n";
-            if (!clang_Cursor_isNull(refd))
-                std::cout << "  -> U:" << CgStr(clang_getCursorUSR(refd)).get() << '\n';
-            //std::cout << "  SUB: ";
-            //clang_visitChildren(tokCurs[i], &visitSubtokens, nullptr);
-            //std::cout << '\n';
-        }
-    }
-    clang_disposeTokens(tu, tokens, numTokens);
-    return CXChildVisit_Continue;
-}
-
-// static CXChildVisitResult astDumper(CXCursor c, CXCursor /* parent */, CXClientData ud) {
-//     if (!clang_Location_isFromMainFile(clang_getCursorLocation(c)))
-//         return CXChildVisit_Continue;
-//     int ind = *static_cast<int*>(ud);
-//     CXCursorKind kind = clang_getCursorKind(c);
-//     CgStr spelling(clang_getCursorSpelling(c));
-//     for (int i = 0; i < ind; ++i)
-//         std::cout.put(' ');
-//     std::cout  << cursorKindNames().at(kind) << ' ' << spelling.get() << '\n';
-//     ind += 2;
-//     clang_visitChildren(c, astDumper, &ind);
-//     return CXChildVisit_Continue;
-// }
-
-static std::ostream& operator<< (std::ostream& out, CXSourceLocation const& loc)
-{
-    unsigned line, col, off;
-    CXFile file;
-    clang_getFileLocation(loc, &file, &line, &col, &off);
-    CgStr fname(clang_getFileName(file));
-    return out << fname.gets() << ":" << line << ":" << col << "+" << off;
-}
-
-static std::ostream& operator<< (std::ostream& out, CXSourceRange const& rng)
-{
-    return out << clang_getRangeStart(rng) << " - " << clang_getRangeEnd(rng);
-}
 
 struct CmdLineArgs {
     std::string rootdir;
@@ -136,46 +61,17 @@ struct DeleterForCXTranslationUnit {
     }
 };
 
-class CgTokens {
+class CgTokensCleanup : private boost::noncopyable {
 public:
-    CgTokens(CXToken* data, unsigned ntokens, CXTranslationUnit tu_)
+    CgTokensCleanup(CXToken* data, unsigned ntokens, CXTranslationUnit tu_)
         : m_data(data), m_ntokens(ntokens), m_tu(tu_)
     {}
 
-    CgTokens(CgTokens&& other)
-        : m_data(std::move(other.m_data))
-        , m_ntokens(std::move(other.m_ntokens))
-        , m_tu(std::move(other.m_tu))
-    {
-        other.m_data = nullptr;
-        other.m_ntokens = 0;
+    ~CgTokensCleanup() {
+        clang_disposeTokens(m_tu, m_data, m_ntokens);
     }
-
-    CgTokens& operator= (CgTokens&& other)
-    {
-        destroy();
-        m_data = std::move(other.m_data);
-        m_ntokens = std::move(other.m_ntokens);
-        m_tu = std::move(other.m_tu);
-        other.m_data = nullptr;
-        other.m_ntokens = 0;
-        return *this;
-    }
-
-    ~CgTokens() {
-        destroy();
-    }
-
-    CXToken* begin() const { return m_data; }
-    CXToken* end() const { return m_data + m_ntokens; }
-    unsigned size() const { return m_ntokens; }
-    CXTranslationUnit tu()  const { return m_tu; }
 
 private:
-    void destroy() {
-        if (m_data)
-            clang_disposeTokens(m_tu, m_data, m_ntokens);
-    }
     CXToken* m_data;
     unsigned m_ntokens;
     CXTranslationUnit m_tu;
@@ -425,7 +321,7 @@ static void processRange(
     CXToken* tokens;
     unsigned numTokens;
     clang_tokenize(tu, rng, &tokens, &numTokens);
-    CgTokens tokCleanup(tokens, numTokens, tu);
+    CgTokensCleanup tokCleanup(tokens, numTokens, tu);
 
     if (numTokens > 0) {
         std::vector<CXCursor> tokCurs(numTokens);
