@@ -18,13 +18,20 @@ CmdLineArgs CmdLineArgs::parse(int argc, char const* const* argv)
         throw std::runtime_error("Too few arguments.");
     CmdLineArgs r = {};
     r.rootdir = argv[1];
+    r.outdir = "."; // Default.
     bool foundCmd = false;
     int i;
     for (i = 2; i < argc; ++i) {
-        if (!std::strcmp(argv[i], "-o")) {
+        if (!std::strcmp(argv[i], "-e")) {
+            r.clangArgs.push_back(getOptVal(argv + i++));
+        } else if (!std::strcmp(argv[i], "-o")) {
+            if (r.outdir) {
+                throw std::runtime_error("Duplicate option -o.");
+            }
             r.outdir = getOptVal(argv + i++);
         } else if (!std::strcmp(argv[i], "cmd")) {
-            r.clangArgs.assign(argv + i + 1, argv + argc);
+            // These come before any extra-args, thus use insert(begin(), ...).
+            r.clangArgs.insert(r.clangArgs.begin(), argv + i + 1, argv + argc);
             r.nClangArgs = argc - i - 1;
             foundCmd = true;
             i = argc;
@@ -32,6 +39,7 @@ CmdLineArgs CmdLineArgs::parse(int argc, char const* const* argv)
         } else if (!std::strcmp(argv[i], "db")) {
             r.compilationDbDir = getOptVal(argv + i++);
             foundCmd = true;
+            ++i;
             break;
         }
     }

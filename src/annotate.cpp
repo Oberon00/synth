@@ -269,9 +269,9 @@ int synth::processTu(
     CXIndex cidx, MultiTuProcessor& state, char const* const* args, int nargs)
 {
     CXTranslationUnit tu;
-    CXErrorCode err = clang_parseTranslationUnit2(
+    CXErrorCode err = clang_parseTranslationUnit2FullArgv(
         cidx,
-        /*source_filename:*/ nullptr,
+        /*filename:*/nullptr, // In commandline.
         args,
         nargs,
         /*unsaved_files:*/ nullptr,
