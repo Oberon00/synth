@@ -3,6 +3,7 @@
 #include "MultiTuProcessor.hpp"
 #include "annotate.hpp"
 #include "cgWrappers.hpp"
+#include "config.hpp"
 #include "xref.hpp"
 
 #include <climits>
@@ -46,6 +47,7 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
             return "c";
 
         case CXToken_Literal:
+            SYNTH_DISCLANGWARN_BEGIN("-Wswitch-enum")
             switch (k) {
                 case CXCursor_ObjCStringLiteral:
                 case CXCursor_StringLiteral:
@@ -61,6 +63,7 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
                 default:
                     return "l";
             }
+            SYNTH_DISCLANGWARN_END
 
         case CXToken_Keyword:
             if (clang_isDeclaration(k))
@@ -72,6 +75,7 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
             return "k";
 
         case CXToken_Identifier:
+            SYNTH_DISCLANGWARN_BEGIN("-Wswitch-enum")
             switch (k) {
                 case CXCursor_ClassDecl:
                 case CXCursor_ClassTemplate:
@@ -135,6 +139,7 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
                         return "nd"; // Name.Decorator
                     return std::string();
             }
+            SYNTH_DISCLANGWARN_END
             assert("unreachable" && false);
     }
 }

@@ -10,6 +10,7 @@ set(synth_HDRS
     "SymbolDeclaration.hpp"
     "cgWrappers.hpp"
     "cmdline.hpp"
+    "config.hpp"
 )
 
 set(synth_SRCS
