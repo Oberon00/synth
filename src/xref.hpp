@@ -19,13 +19,19 @@ void linkCursorIfIncludedDst(
     CXCursor dst,
     fs::path const& srcurl,
     unsigned srcLineno,
-    MultiTuProcessor& state,
+    MultiTuProcessor const& state,
     bool byUsr);
 
 void linkSymbol(
     Markup& m,
     SymbolDeclaration const& sym,
     fs::path const& srcurl);
+
+bool linkInclude(
+    Markup& m,
+    CXCursor incCursor,
+    fs::path const& srcurl,
+    MultiTuProcessor const& state);
 
 } // namespace synth
 

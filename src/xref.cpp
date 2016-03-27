@@ -54,7 +54,7 @@ void synth::linkCursorIfIncludedDst(
     CXCursor dst,
     fs::path const& srcurl,
     unsigned srcLineno,
-    MultiTuProcessor& state,
+    MultiTuProcessor const& state,
     bool byUsr)
 {
     CXFile file;
@@ -70,4 +70,20 @@ void synth::linkCursorIfIncludedDst(
         m,
         {CgStr(clang_getCursorUSR(dst)).get(), filename, lineno, byUsr},
         srcurl);
+}
+
+bool synth::linkInclude(
+    Markup& m,
+    CXCursor incCursor,
+    fs::path const& srcurl,
+    MultiTuProcessor const& state)
+{
+    CXFile file = clang_getIncludedFile(incCursor);
+    std::string filename(CgStr(clang_getFileName(file)).gets());
+    assert(filename != srcurl);
+    if (filename.empty() || !state.underRootdir(filename))
+        return false;
+    m.tag = Markup::kTagLink;
+    m.attrs["href"] = relativeUrl(srcurl, filename);
+    return true;
 }

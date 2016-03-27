@@ -180,6 +180,27 @@ static void processToken(
         return;
     }
 
+    CXCursorKind k = clang_getCursorKind(cur);
+    if (k == CXCursor_InclusionDirective) {
+        Markup im = {};
+        CXSourceRange incrng = clang_getCursorExtent(cur);
+        clang_getFileLocation(
+            clang_getRangeStart(incrng),
+            nullptr,
+            nullptr,
+            nullptr,
+            &im.begin_offset);
+        clang_getFileLocation(
+            clang_getRangeEnd(incrng),
+            nullptr,
+            nullptr,
+            nullptr,
+            &im.end_offset);
+        if (linkInclude(im, cur, srcFname.get(), state))
+            out.markups.push_back(std::move(im));
+        return;
+    }
+
     // clang_isReference() sometimes reports false negatives, e.g. for
     // overloaded operators, so check manually.
     CXCursor referenced = clang_getCursorReferenced(cur);
@@ -247,10 +268,8 @@ static void processRange(
 
     clang_getFileLocation(cloc, &cfile, nullptr, nullptr, nullptr);
     auto output = state.prepareToProcess(cfile);
-    if (!output.first) {
-        std::cout << "Skipped file: " << CgStr(clang_getFileName(cfile)).gets()<< '\n';
+    if (!output.first)
         return;
-    }
 
     CXToken* tokens;
     unsigned numTokens;
