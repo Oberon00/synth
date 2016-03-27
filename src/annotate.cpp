@@ -113,6 +113,7 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
                 case CXCursor_MemberRef:
                 case CXCursor_DeclRefExpr:
                 case CXCursor_MemberRefExpr:
+                case CXCursor_UsingDeclaration:
                 case CXCursor_TemplateRef: {
                     CXCursor refd = clang_getCursorReferenced(cur);
                     return getCssClasses(tok, refd, tu);
@@ -154,7 +155,6 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
                 case CXCursor_LabelStmt:
                     return "nl"; // Name.Label
 
-                case CXCursor_UsingDeclaration: // TODO: Depends on referenced.
                 case CXCursor_LinkageSpec: // Handled by other tokens.
                 case CXCursor_CXXAccessSpecifier: // Handled by other tokens.
                     return std::string();
