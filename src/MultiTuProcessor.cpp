@@ -13,15 +13,17 @@ namespace fs = boost::filesystem;
 // dir must be an absolute path without filename component.
 static bool isInDir(fs::path const& dir, fs::path p)
 {
-    p = fs::absolute(std::move(p));
+    p = fs::absolute(std::move(p)).lexically_normal();
 
-    return std::mismatch(dir.begin(), dir.end(), p.begin(), p.end()).first
+    bool r = std::mismatch(dir.begin(), dir.end(), p.begin(), p.end()).first
         == dir.end();
+
+    return r;
 }
 
 
 synth::MultiTuProcessor::MultiTuProcessor(fs::path const& rootdir)
-    : m_rootdir(fs::absolute(rootdir))
+    : m_rootdir(fs::absolute(rootdir).lexically_normal())
 {
     if (m_rootdir.filename() == ".")
         m_rootdir.remove_filename();
