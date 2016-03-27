@@ -103,7 +103,6 @@ void HighlightedFile::writeTo(std::ostream& out) const
         throw std::runtime_error("Could not reopen source " + originalPath);
     auto hls = flatten(markups);
     unsigned lineno = 0;
-    out << "<code><pre>\n";
     bool eof;
     for (auto const& hl : hls) {
         eof = !copyWithLinenosUntil(in, out, lineno, hl.offset);
@@ -115,5 +114,4 @@ void HighlightedFile::writeTo(std::ostream& out) const
     }
     eof = !copyWithLinenosUntil(in, out, lineno, UINT_MAX);
     assert(eof);
-    out << "\n</pre></code>\n";
 }

@@ -9,6 +9,7 @@ namespace synth {
 struct CmdLineArgs {
     char const* rootdir;
     char const* outdir;
+    char const* templateFile;
 
     int nClangArgs;
 

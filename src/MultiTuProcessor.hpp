@@ -15,6 +15,8 @@
 
 namespace synth {
 
+class SimpleTemplate;
+
 namespace fs = boost::filesystem;
 
 struct MissingDef {
@@ -55,7 +57,7 @@ public:
 
     void resolveMissingRefs();
 
-    void writeOutput(fs::path const& outpath);
+    void writeOutput(fs::path const& outpath, SimpleTemplate const& tpl);
 
 private:
     explicit MultiTuProcessor(fs::path const& rootdir_);

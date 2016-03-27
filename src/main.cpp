@@ -1,13 +1,30 @@
 #include "MultiTuProcessor.hpp"
+#include "SimpleTemplate.hpp"
 #include "annotate.hpp"
 #include "cgWrappers.hpp"
 #include "cmdline.hpp"
 #include "CgStr.hpp"
 
 #include <iostream>
+#include <sstream>
+#include <fstream>
 #include <boost/filesystem.hpp>
 
 using namespace synth;
+
+static char const kDefaultTemplateText[] =
+R"EOT(<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>@@filename@@</title>
+        <link rel="stylesheet" href="@@rootpath@@/code.css">
+    </head>
+    <body>
+        <div class="highlight"><pre>@@code@@</pre></div>
+    </body>
+</html>)EOT";
 
 namespace {
 
@@ -33,11 +50,35 @@ static std::vector<CgStr> getClArgs(CXCompileCommand cmd)
     return result;
 }
 
+// Adapted from
+// http://insanecoding.blogspot.co.at/2011/11/how-to-read-in-file-in-c.html
+static std::string getFileContents(char const* filename)
+{
+    std::ifstream in(filename, std::ios::in | std::ios::binary);
+    in.exceptions(std::ios::badbit);
+    std::ostringstream contents;
+    contents << in.rdbuf();
+    return std::move(contents).str();
+}
+
 static int executeCmdLine(CmdLineArgs const& args)
 {
+    SimpleTemplate tpl(std::string{});
+    if (args.templateFile) {
+        try {
+            tpl = SimpleTemplate(getFileContents(args.templateFile));
+        } catch (std::ios::failure const& e) {
+            std::cerr << "Error reading output template: " << e.what() << '\n';
+            return EXIT_FAILURE;
+        }
+    } else {
+        tpl = SimpleTemplate(kDefaultTemplateText); 
+    }
+
     CgIdxHandle hcidx(clang_createIndex(
             /*excludeDeclarationsFromPCH:*/ true,
             /*displayDiagnostics:*/ true));
+
     auto state(MultiTuProcessor::forRootdir(std::move(args.rootdir)));
 
     if (args.compilationDbDir) {
@@ -89,7 +130,7 @@ static int executeCmdLine(CmdLineArgs const& args)
             return r;
     }
     state.resolveMissingRefs();
-    state.writeOutput(args.outdir);
+    state.writeOutput(args.outdir, tpl);
     return EXIT_SUCCESS;
 }
 

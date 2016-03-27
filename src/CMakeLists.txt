@@ -7,6 +7,7 @@ set(synth_HDRS
     "FileIdSet.hpp"
     "HighlightedFile.hpp"
     "MultiTuProcessor.hpp"
+    "SimpleTemplate.hpp"
     "SymbolDeclaration.hpp"
     "cgWrappers.hpp"
     "cmdline.hpp"
@@ -16,6 +17,7 @@ set(synth_HDRS
 set(synth_SRCS
     "HighlightedFile.cpp"
     "MultiTuProcessor.cpp"
+    "SimpleTemplate.cpp"
     "annotate.cpp"
     "cmdline.cpp"
     "main.cpp"

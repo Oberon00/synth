@@ -1,6 +1,8 @@
 #include "MultiTuProcessor.hpp"
+#include "SimpleTemplate.hpp"
 #include <algorithm>
 #include <boost/filesystem.hpp>
+#include <boost/variant/variant.hpp>
 #include "CgStr.hpp"
 #include <climits>
 #include <fstream>
@@ -83,17 +85,25 @@ synth::Markup& synth::MultiTuProcessor::markupFromMissingDef(
     return hlFile.markups[def.markupIdx];
 }
 
-void synth::MultiTuProcessor::writeOutput(fs::path const& outpath)
+void synth::MultiTuProcessor::writeOutput(
+    fs::path const& outpath, SimpleTemplate const& tpl)
 {
     m_missingDefs.clear(); // Will be invalidated by the below operations.
+    SimpleTemplate::Context ctx;
     for (auto& hlfile : m_outputs) {
         hlfile.prepareOutput();
-        auto hlpath = outpath / fs::relative(hlfile.originalPath, m_rootdir);
+        auto relpath = fs::relative(hlfile.originalPath, m_rootdir);
+        auto hlpath = outpath / relpath ;
         hlpath += ".html";
         fs::create_directories(hlpath.parent_path());
         std::ofstream outfile(hlpath.c_str());
         outfile.exceptions(std::ios::badbit | std::ios::failbit);
-        hlfile.writeTo(outfile);
+        ctx["code"] = SimpleTemplate::ValCallback(
+            std::bind(&HighlightedFile::writeTo, &hlfile, std::placeholders::_1));
+        ctx["filename"] = relpath.string();
+        ctx["rootpath"] = fs::relative(outpath, hlpath.parent_path())
+            .lexically_normal().string();
+        tpl.writeTo(outfile, ctx);
         std::cout << hlpath << " written\n";
     }
 }

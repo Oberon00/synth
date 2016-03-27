@@ -12,23 +12,28 @@ static char const* getOptVal(char const* const* opt)
     return opt[1];
 }
 
+static void getOptVal(char const* const* opt, char const*& out)
+{
+    if (out)
+        throw std::runtime_error("Duplicate option " + std::string(opt[0]));
+    out = getOptVal(opt);
+}
+
 CmdLineArgs CmdLineArgs::parse(int argc, char const* const* argv)
 {
     if (argc < 3)
         throw std::runtime_error("Too few arguments.");
     CmdLineArgs r = {};
     r.rootdir = argv[1];
-    r.outdir = "."; // Default.
     bool foundCmd = false;
     int i;
     for (i = 2; i < argc; ++i) {
         if (!std::strcmp(argv[i], "-e")) {
             r.clangArgs.push_back(getOptVal(argv + i++));
+        } else if (!std::strcmp(argv[i], "-t")) {
+             getOptVal(argv + i++, r.templateFile);
         } else if (!std::strcmp(argv[i], "-o")) {
-            if (r.outdir) {
-                throw std::runtime_error("Duplicate option -o.");
-            }
-            r.outdir = getOptVal(argv + i++);
+             getOptVal(argv + i++, r.outdir);
         } else if (!std::strcmp(argv[i], "cmd")) {
             // These come before any extra-args, thus use insert(begin(), ...).
             r.clangArgs.insert(r.clangArgs.begin(), argv + i + 1, argv + argc);
@@ -47,6 +52,9 @@ CmdLineArgs CmdLineArgs::parse(int argc, char const* const* argv)
         throw std::runtime_error("Missing command.");
     if (i != argc)
         throw std::runtime_error("Superfluous commandline arguments.");
+
+    if (!r.outdir)
+        r.outdir = ".";
     return r;
 }
 
