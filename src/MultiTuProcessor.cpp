@@ -37,16 +37,20 @@ bool synth::MultiTuProcessor::underRootdir(fs::path const& p) const
 std::pair<synth::HighlightedFile*, unsigned>
 synth::MultiTuProcessor::prepareToProcess(CXFile f)
 {
+
+    static std::pair<synth::HighlightedFile*, unsigned> const null = {
+        nullptr, UINT_MAX};
     if (!f)
-        return {nullptr, UINT_MAX};
-    CgStr fpath(clang_getFileName(f));
-    if (fpath.empty() || !isInDir(m_rootdir, fpath.get()))
-        return {nullptr, UINT_MAX};
+        return null;
     CXFileUniqueID fuid;
     if (clang_getFileUniqueID(f, &fuid) != 0)
-        return {nullptr, UINT_MAX};
-    if (!m_processedFiles.insert(fuid).second)
-        return {nullptr, UINT_MAX};
+        return null;
+    if (m_processedFiles.find(fuid) != m_processedFiles.end())
+        return null;
+    CgStr fpath(clang_getFileName(f));
+    if (fpath.empty() || !isInDir(m_rootdir, fpath.get()))
+        return null;
+    m_processedFiles.insert(fuid);
     m_outputs.emplace_back();
     HighlightedFile* r = &m_outputs.back();
     r->originalPath = fpath.get();

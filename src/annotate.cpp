@@ -61,7 +61,6 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
                 default:
                     return "l";
             }
-            break;
 
         case CXToken_Keyword:
             if (clang_isDeclaration(k))
@@ -136,9 +135,7 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
                         return "nd"; // Name.Decorator
                     return std::string();
             }
-            assert(!"unreachable");
-        default:
-            assert(!"Invalid token kind.");
+            assert("unreachable" && false);
     }
 }
 
@@ -245,8 +242,10 @@ static void processRange(
 
     clang_getFileLocation(cloc, &cfile, nullptr, nullptr, nullptr);
     auto output = state.prepareToProcess(cfile);
-    if (!output.first)
+    if (!output.first) {
+        std::cout << "Skipped file: " << CgStr(clang_getFileName(cfile)).gets()<< '\n';
         return;
+    }
 
     CXToken* tokens;
     unsigned numTokens;
@@ -261,14 +260,18 @@ static void processRange(
                 *output.first, output.second, state, tokens[i], tokCurs[i]);
         }
     }
-    std::cout << "Processed " << numTokens << " tokens in " << CgStr(clang_getFileName(cfile)).gets() << '\n';
+    std::cout << "Processed " << numTokens << " tokens in "
+              << CgStr(clang_getFileName(cfile)).gets() << '\n';
     clang_findIncludesInFile(tu, cfile, {&state, &includeVisitor});
 }
 
 int synth::processTu(
-    CXIndex cidx, MultiTuProcessor& state, char const* const* args, int nargs)
+    CXIndex cidx,
+    MultiTuProcessor& state,
+    char const* const* args,
+    int nargs)
 {
-    CXTranslationUnit tu;
+    CXTranslationUnit tu = nullptr;
     CXErrorCode err = clang_parseTranslationUnit2FullArgv(
         cidx,
         /*filename:*/nullptr, // In commandline.
@@ -278,14 +281,18 @@ int synth::processTu(
         /*num_unsaved_files:*/ 0,
         CXTranslationUnit_DetailedPreprocessingRecord,
         &tu);
+    CgTuHandle htu(tu);
     if (err != CXError_Success) {
         std::cerr << "Failed parsing translation unit (code "
                   << static_cast<int>(err)
                   << ")\n";
+        std::cerr << "  args:";
+        for (int i = 0; i < nargs; ++i)
+            std::cerr << ' ' << args[i];
+        std::cerr << '\n';
         return err + 10;
     }
 
-    CgTuHandle htu(tu);
     CXCursor rootcur = clang_getTranslationUnitCursor(tu);
     processRange(state, tu, clang_getCursorExtent(rootcur));
     //clang_visitChildren(rootcur, &tuVisitor, &state);
