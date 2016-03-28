@@ -95,7 +95,9 @@ void synth::MultiTuProcessor::writeOutput(
         auto relpath = fs::relative(hlfile.originalPath, m_rootdir);
         auto hlpath = outpath / relpath ;
         hlpath += ".html";
-        fs::create_directories(hlpath.parent_path());
+        auto hldir = hlpath.parent_path();
+        if (hldir != ".")
+            fs::create_directories(hldir);
         std::ofstream outfile(hlpath.c_str());
         outfile.exceptions(std::ios::badbit | std::ios::failbit);
         ctx["code"] = SimpleTemplate::ValCallback(
