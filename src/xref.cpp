@@ -68,7 +68,7 @@ void synth::linkCursorIfIncludedDst(
         return;
     return linkSymbol(
         m,
-        {CgStr(clang_getCursorUSR(dst)).get(), filename, lineno, byUsr},
+        {CgStr(clang_getCursorUSR(dst)).gets(), filename, lineno, byUsr},
         srcurl);
 }
 
