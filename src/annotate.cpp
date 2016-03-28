@@ -56,6 +56,47 @@ static std::string getVarCssClasses(CXCursor cur)
     return "vi"; // Name.Variable.Instance (nonstatic member variable)
 }
 
+static std::string getIntCssClasses(CXToken tok, CXTranslationUnit tu)
+{
+    std::string sp = CgStr(clang_getTokenSpelling(tu, tok)).gets();
+    if (!sp.empty()) {
+        if (sp.size() >= 2 && sp[0] == '0') {
+            if (sp[1] == 'x' || sp[1] == 'X')
+                return "mh"; // Number.Hex
+            if (sp[1] == 'b' || sp[1] == 'B')
+                return "mb"; // Number.Binary
+            return "mo"; // Number.Octal;
+        }
+        char suffix = sp[sp.size() - 1];
+        if (suffix == 'l' || suffix == 'L')
+            return "il"; // Number.Integer.Long
+    }
+    return "mi"; // Number.
+}
+
+static bool startsWith(std::string const& s, std::string const& p) {
+    return s.compare(0, p.size(), p) == 0;
+}
+
+static bool isBuiltinTypeKw(std::string const& t) {
+    return startsWith(t, "unsigned ")
+        || t == "unsigned"
+        || startsWith(t, "signed ")
+        || t == "signed"
+        || startsWith(t, "short ")
+        || t == "short"
+        || startsWith(t, "long ")
+        || t == "long"
+        || t == "int"
+        || t == "float"
+        || t == "double"
+        || t == "bool"
+        || t == "char"
+        || t == "char16_t"
+        || t == "char32_t"
+        || t == "wchar_t";
+}
+
 static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu)
 {
     CXCursorKind k = clang_getCursorKind(cur);
@@ -72,6 +113,7 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
         }
         return "cp";
     }
+
     switch (tk) {
         case CXToken_Punctuation:
             if (k == CXCursor_BinaryOperator || k == CXCursor_UnaryOperator)
@@ -92,7 +134,7 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
                 case CXCursor_FloatingLiteral:
                     return "mf";
                 case CXCursor_IntegerLiteral:
-                    return "mi";
+                    return getIntCssClasses(tok, tu);
                 case CXCursor_ImaginaryLiteral:
                     return "m"; // Number
                 default:
@@ -100,14 +142,22 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
             }
             SYNTH_DISCLANGWARN_END
 
-        case CXToken_Keyword:
-            if (clang_isDeclaration(k))
-                return "kd";
-            if (k == CXCursor_TypeRef)
-                return "kt";
+        case CXToken_Keyword: {
             if (k == CXCursor_BinaryOperator || k == CXCursor_UnaryOperator)
                 return "ow"; // Operator.Word
+            if (k == CXCursor_CXXNullPtrLiteralExpr
+                || k == CXCursor_CXXBoolLiteralExpr
+                || k == CXCursor_ObjCBoolLiteralExpr
+            ) {
+                return "nb"; // Name.Builtin
+            }
+            std::string sp = CgStr(clang_getTokenSpelling(tu, tok)).gets();
+            if (k == CXCursor_TypeRef || isBuiltinTypeKw(sp))
+                return "nt";
+            if (clang_isDeclaration(k))
+                return "kd";
             return "k";
+        }
 
         case CXToken_Identifier:
             if (isTypeKind(k))
