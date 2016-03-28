@@ -26,30 +26,6 @@ PrimitiveTag Markup::end_tag() const
     return {end_offset, std::string("</") + tag + ">"};
 }
 
-static std::vector<PrimitiveTag> flatten(
-    std::vector<Markup> const& sortedMarkups)
-{
-    std::vector<PrimitiveTag> r;
-    std::vector<PrimitiveTag> pendingEnds;
-    for (auto const& m : sortedMarkups) {
-        while (!pendingEnds.empty()
-            && m.begin_offset >= pendingEnds.back().offset
-        ) {
-            r.push_back(std::move(pendingEnds.back()));
-            pendingEnds.pop_back();
-        }
-        r.push_back(m.begin_tag());
-        pendingEnds.push_back(std::move(m).end_tag());
-    }
-
-    auto rit = pendingEnds.rbegin();
-    auto rend = pendingEnds.rend();
-    for (; rit != rend; ++rit)
-        r.push_back(*rit);
-
-    return r;
-}
-
 void HighlightedFile::prepareOutput()
 {
     // ORDER BY begin_offset ASC, end_offset DESC
@@ -62,8 +38,22 @@ void HighlightedFile::prepareOutput()
         });
 }
 
+static void writeAllEnds(
+    std::ostream& out, std::vector<Markup const*> const& activeTags)
+{
+
+    auto rit = activeTags.rbegin();
+    auto rend = activeTags.rend();
+    for (; rit != rend; ++rit)
+        out << (*rit)->end_tag().content;
+}
+
 static bool copyWithLinenosUntil(
-    std::istream& in, std::ostream& out, unsigned& lineno, unsigned offset)
+    std::istream& in,
+    std::ostream& out,
+    unsigned offset,
+    unsigned& lineno,
+    std::vector<Markup const*> const& activeTags)
 {
     if (lineno == 0) {
         ++lineno;
@@ -73,16 +63,21 @@ static bool copyWithLinenosUntil(
     while (in && in.tellg() < offset) {
         int ch = in.get();
         if (ch == std::istream::traits_type::eof()) {
-            out << "</span>";
+            out << "</span>\n";
             return false;
         } else {
             switch (ch) {
-                case '\n':
+                case '\n': {
+                    writeAllEnds(out, activeTags);
                     ++lineno;
                     out << "</span>\n<span id=\"L" 
                         << std::to_string(lineno)
                         << "\" class=\"Ln\">";
-                    break;
+
+                    for (auto const& m: activeTags)
+                        out << m->begin_tag().content;
+                } break;
+
                 case '<':
                     out << "&lt;";
                     break;
@@ -100,22 +95,44 @@ static bool copyWithLinenosUntil(
     return true;
 }
 
+static void copyWithLinenosUntilNoEof(
+    std::istream& in,
+    std::ostream& out,
+    unsigned offset,
+    unsigned& lineno,
+    std::vector<Markup const*> const& activeTags)
+{
+    bool eof = !copyWithLinenosUntil(in, out, offset, lineno, activeTags);
+    if (eof) {
+        throw std::runtime_error(
+            "unexpected EOF in input source at line " + std::to_string(lineno));
+    }
+}
+
 void HighlightedFile::writeTo(std::ostream& out) const
 {
     std::ifstream in(originalPath);
     if (!in)
         throw std::runtime_error("Could not reopen source " + originalPath);
-    auto hls = flatten(markups);
+    std::vector<Markup const*> activeTags;
     unsigned lineno = 0;
-    bool eof;
-    for (auto const& hl : hls) {
-        eof = !copyWithLinenosUntil(in, out, lineno, hl.offset);
-        if (eof) {
-            std::cerr << "target offset " << hl.offset << " for " << hl.content << "\n";
-            throw std::runtime_error("unexpected EOF in " + originalPath);
+    for (auto const& m : markups) {
+        while (!activeTags.empty()
+            && m.begin_offset >= activeTags.back()->end_offset
+        ) {
+            PrimitiveTag endTag = activeTags.back()->end_tag();
+            copyWithLinenosUntilNoEof(
+                in, out, endTag.offset, lineno, activeTags);
+            activeTags.pop_back();
+            out << endTag.content;
         }
-        out << hl.content;
+
+        copyWithLinenosUntilNoEof(
+            in, out, m.begin_offset, lineno, activeTags);
+        out << m.begin_tag().content;
+        activeTags.push_back(&m);
     }
-    eof = !copyWithLinenosUntil(in, out, lineno, UINT_MAX);
+    bool eof = !copyWithLinenosUntil(in, out, UINT_MAX, lineno, activeTags);
     assert(eof);
+    writeAllEnds(out, activeTags);
 }
