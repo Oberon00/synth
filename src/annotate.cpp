@@ -305,8 +305,15 @@ static void processFile(
         std::vector<CXCursor> tokCurs(numTokens);
         clang_annotateTokens(tu, tokens, numTokens, tokCurs.data());
         for (unsigned i = 0; i < numTokens - 1; ++i) {
+            CXCursor cur = tokCurs[i];
+            CXSourceLocation tokLoc = clang_getTokenLocation(tu, tokens[i]);
+            if (!clang_equalLocations(clang_getCursorLocation(cur), tokLoc)) {
+                CXCursor c2 = clang_getCursor(tu, tokLoc);
+                if (clang_equalLocations(clang_getCursorLocation(c2), tokLoc))
+                    cur = c2;
+            }
             processToken(
-                *output.first, output.second, state, tokens[i], tokCurs[i]);
+                *output.first, output.second, state, tokens[i], cur);
         }
     }
     std::cout << "Processed " << numTokens << " tokens in "
