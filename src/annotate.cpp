@@ -13,15 +13,8 @@
 
 using namespace synth;
 
-static CgStr getCursorFilename(CXCursor c)
+static bool isTypeKind(CXCursorKind k)
 {
-    CXFile f;
-    clang_getFileLocation(
-        clang_getCursorLocation(c), &f, nullptr, nullptr, nullptr);
-    return clang_getFileName(f);
-}
-
-static bool isTypeKind(CXCursorKind k) {
     SYNTH_DISCLANGWARN_BEGIN("-Wswitch-enum")
     switch (k) {
         case CXCursor_ClassDecl:
@@ -243,8 +236,7 @@ static void processToken(
     // overloaded operators, so check manually.
     CXCursor referenced = clang_getCursorReferenced(cur);
     bool isref = !clang_Cursor_isNull(referenced)
-        && !clang_equalCursors(cur, referenced)
-        && state.underRootdir(getCursorFilename(referenced).get());
+        && !clang_equalCursors(cur, referenced);
     if (isref) {
         linkCursorIfIncludedDst(
             m, referenced, srcFname.get(), lineno, state, /*byUsr:*/ false);
