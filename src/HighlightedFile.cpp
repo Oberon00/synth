@@ -71,7 +71,7 @@ static bool copyWithLinenosUntil(
                     writeAllEnds(out, activeTags);
                     ++lineno;
                     out << "</span>\n<span id=\"L" 
-                        << std::to_string(lineno)
+                        << lineno
                         << "\" class=\"Ln\">";
 
                     for (auto const& m: activeTags)
@@ -87,8 +87,12 @@ static bool copyWithLinenosUntil(
                 case '&':
                     out << "&amp;";
                     break;
+                case '\r':
+                    // Discard.
+                    break;
                 default:
                     out.put(static_cast<char>(ch));
+                    break;
             }
         }
     }
