@@ -203,14 +203,12 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
                 case CXCursor_Namespace:
                 case CXCursor_NamespaceAlias:
                 case CXCursor_UsingDirective:
+                case CXCursor_NamespaceRef:
                     return "nn"; // Name.Namespace
 
                 case CXCursor_LabelStmt:
                     return "nl"; // Name.Label
 
-                case CXCursor_LinkageSpec: // Handled by other tokens.
-                case CXCursor_CXXAccessSpecifier: // Handled by other tokens.
-                    return std::string();
                 default:
                     if (clang_isAttribute(k))
                         return "nd"; // Name.Decorator
