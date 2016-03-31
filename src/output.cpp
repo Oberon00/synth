@@ -87,7 +87,7 @@ static void writeCssClasses(TokenAttributes attrs, std::ostream& out)
 {
     if ((attrs & TokenAttributes::flagDef) != TokenAttributes::none)
         out << "def ";
-    if ((attrs & TokenAttributes::flagDef) != TokenAttributes::none)
+    if ((attrs & TokenAttributes::flagDecl) != TokenAttributes::none)
         out << "decl ";
     out << getTokenKindCssClass(attrs);
 }
