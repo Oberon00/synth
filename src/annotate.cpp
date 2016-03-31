@@ -113,12 +113,13 @@ static TokenAttributes getTokenAttributes(
     CXCursorKind k = clang_getCursorKind(cur);
     CXTokenKind tk = clang_getTokenKind(tok);
     if (clang_isPreprocessing(k)) {
-        if (k == CXCursor_InclusionDirective
-            && (tk == CXToken_Literal || tk == CXToken_Identifier)
-        ) {
+        if (k == CXCursor_InclusionDirective) {
             CgStr spelling = clang_getTokenSpelling(tu, tok);
-            if (!std::strcmp(spelling.gets(), "include"))
+            if (std::strcmp(spelling.gets(), "include") != 0
+                    && std::strcmp(spelling.gets(), "#") != 0
+            ) {
                 return TokenAttributes::preIncludeFile;
+            }
         }
         return TokenAttributes::pre;
     }
