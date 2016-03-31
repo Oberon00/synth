@@ -13,12 +13,27 @@
 
 using namespace synth;
 
+static const unsigned kMaxRefRecursion = 16;
+
 namespace {
 
 struct FileState {
     HighlightedFile& hlFile;
     MultiTuProcessor& multiTuProcessor;
 };
+
+std::ostream& operator<< (std::ostream& out, CXSourceRange rng)
+{
+    CXSourceLocation beg = clang_getRangeStart(rng);
+    CXFile f;
+    unsigned lineno, col;
+    clang_getFileLocation(beg, &f, &lineno, &col, nullptr);
+    out << CgStr(clang_getFileName(f)).gets() << ':' << lineno << ':' << col;
+
+    CXSourceLocation end = clang_getRangeEnd(rng);
+    clang_getFileLocation(end, nullptr, &lineno, &col, nullptr);
+    return out << '-' << lineno << ':' << col;
+}
 
 } // anonymous namespace
 
@@ -107,7 +122,7 @@ static bool isBuiltinTypeKw(std::string const& t) {
 }
 
 static TokenAttributes getTokenAttributes(
-    CXToken tok, CXCursor cur, CXTranslationUnit tu)
+    CXToken tok, CXCursor cur, CXTranslationUnit tu, unsigned recursionDepth = 0)
 {
     CXCursorKind k = clang_getCursorKind(cur);
     CXTokenKind tk = clang_getTokenKind(tok);
@@ -179,7 +194,33 @@ static TokenAttributes getTokenAttributes(
                 case CXCursor_UsingDeclaration:
                 case CXCursor_TemplateRef: {
                     CXCursor refd = clang_getCursorReferenced(cur);
-                    return getTokenAttributes(tok, refd, tu);
+                    bool selfRef = clang_equalCursors(cur, refd);
+                    bool recErr = recursionDepth > kMaxRefRecursion;
+                    if (selfRef || recErr) {
+                        CgStr kindSp(clang_getCursorKindSpelling(k));
+                        CgStr rKindSp(clang_getCursorKindSpelling(
+                                clang_getCursorKind(refd)));
+                        std::clog << "When trying to highlight token "
+                                << clang_getTokenExtent(tu, tok) << " "
+                                << CgStr(clang_getTokenSpelling(tu, tok)).gets()
+                                << ":\n"
+                                << "  Cursor " << clang_getCursorExtent(cur)
+                                << " " << kindSp.gets() << " references ";
+                        if (selfRef) {
+                            std::clog << "itself.\n";
+                        } else {
+                            std::clog << clang_getCursorExtent(refd)
+                                      << " " << rKindSp.gets();
+                        }
+                        std::clog << "  Recursion depth is "
+                                  << recursionDepth << '\n';
+                        if (recErr)
+                            std::clog << "  Maximum depth exceeded.\n";
+                        return TokenAttributes::none;
+                    }
+
+                    return getTokenAttributes(
+                        tok, refd, tu, recursionDepth + 1);
                 }
 
                 case CXCursor_ObjCPropertyDecl:
