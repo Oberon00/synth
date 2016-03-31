@@ -93,8 +93,8 @@ struct SourceLocation {
 };
 
 struct Markup {
-    unsigned begin_offset;
-    unsigned end_offset;
+    unsigned beginOffset;
+    unsigned endOffset;
 
     TokenAttributes attrs;
 

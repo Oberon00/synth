@@ -239,10 +239,10 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
     //std::cout << rng << ": " << CgStr(clang_getTokenSpelling(tu, tok)).gets() << '\n';
     unsigned lineno;
     clang_getFileLocation(
-        clang_getRangeStart(rng), nullptr, &lineno, nullptr, &m.begin_offset);
+        clang_getRangeStart(rng), nullptr, &lineno, nullptr, &m.beginOffset);
     clang_getFileLocation(
-        clang_getRangeEnd(rng), nullptr, nullptr, nullptr, &m.end_offset);
-    if (m.begin_offset == m.end_offset) {
+        clang_getRangeEnd(rng), nullptr, nullptr, nullptr, &m.endOffset);
+    if (m.beginOffset == m.endOffset) {
         markups.pop_back();
         return;
     }
@@ -269,13 +269,13 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
             nullptr,
             nullptr,
             nullptr,
-            &incLnk.begin_offset);
+            &incLnk.beginOffset);
         clang_getFileLocation(
             clang_getRangeEnd(incrng),
             nullptr,
             nullptr,
             nullptr,
-            &incLnk.end_offset);
+            &incLnk.endOffset);
         if (linkInclude(incLnk, cur, state.multiTuProcessor))
             state.hlFile.markups.push_back(std::move(incLnk));
         return;

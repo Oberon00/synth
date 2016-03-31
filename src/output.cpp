@@ -18,19 +18,19 @@ static std::string relativeUrl(fs::path const& from, fs::path const& to)
 
 bool Markup::empty() const
 {
-    return begin_offset == end_offset
+    return beginOffset == endOffset
         || (attrs == TokenAttributes::none && !isRef());
 }
 
 void HighlightedFile::prepareOutput()
 {
-    // ORDER BY begin_offset ASC, end_offset DESC
+    // ORDER BY beginOffset ASC, endOffset DESC
     std::sort(
         markups.begin(), markups.end(),
         [] (Markup const& lhs, Markup const& rhs) {
-            return lhs.begin_offset != rhs.begin_offset
-                ? lhs.begin_offset < rhs.begin_offset
-                : lhs.end_offset > rhs.end_offset;
+            return lhs.beginOffset != rhs.beginOffset
+                ? lhs.beginOffset < rhs.beginOffset
+                : lhs.endOffset > rhs.endOffset;
         });
 }
 
@@ -206,15 +206,15 @@ void HighlightedFile::writeTo(std::ostream& out) const
     OutputState state {in, out, 0, activeTags, *originalPath};
     for (auto const& m : markups) {
         while (!activeTags.empty()
-            && m.begin_offset >= activeTags.back()->end_offset
+            && m.beginOffset >= activeTags.back()->endOffset
         ) {
             Markup const& mEnd = *activeTags.back();
-            copyWithLinenosUntilNoEof(state, mEnd.end_offset);
+            copyWithLinenosUntilNoEof(state, mEnd.endOffset);
             writeEndTag(mEnd, out);
             activeTags.pop_back();
         }
 
-        copyWithLinenosUntilNoEof(state, m.begin_offset);
+        copyWithLinenosUntilNoEof(state, m.beginOffset);
         writeBeginTag(m, state.srcPath, out);
         activeTags.push_back(&m);
     }
