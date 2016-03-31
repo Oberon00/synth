@@ -3,8 +3,7 @@
 #include <utility>
 #include <fstream>
 #include <climits>
-#include <iostream>
-#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem.hpp>
 
 using namespace synth;
 
@@ -12,7 +11,7 @@ static std::string relativeUrl(fs::path const& from, fs::path const& to)
 {
     if (to == from)
         return std::string();
-    fs::path r = fs::relative(to, from.parent_path());
+    fs::path r = to.lexically_relative(from.parent_path());
     return r == "." ? std::string() : r.string();
 }
 
@@ -93,14 +92,14 @@ static void writeCssClasses(TokenAttributes attrs, std::ostream& out)
 }
 
 static void writeBeginTag(
-    Markup const& m, fs::path const& srcPath, std::ostream& out)
+    Markup const& m, fs::path const& outPath, std::ostream& out)
 {
     if (m.empty())
         return;
     out << '<';
     if (m.isRef()) {
         out << "a href=\"";
-        out << relativeUrl(srcPath, m.refd.file->dstPath());
+        out << relativeUrl(outPath, m.refd.file->dstPath());
         if (m.refd.lineno != 0)
             out << "#L" << m.refd.lineno;
         out << "\" ";
@@ -141,7 +140,7 @@ struct OutputState {
     std::ostream& out;
     unsigned lineno;
     std::vector<Markup const*> const& activeTags;
-    fs::path const& srcPath;
+    fs::path const& outPath;
 };
 
 } // anonymous namespace
@@ -170,7 +169,7 @@ static bool copyWithLinenosUntil(OutputState& state, unsigned offset)
                         << "\" class=\"Ln\">";
 
                     for (auto const& m: state.activeTags)
-                        writeBeginTag(*m, state.srcPath, state.out);
+                        writeBeginTag(*m, state.outPath, state.out);
                 } break;
 
                 case '<':
@@ -199,21 +198,21 @@ static void copyWithLinenosUntilNoEof(OutputState& state, unsigned offset)
     bool eof = !copyWithLinenosUntil(state, offset);
     if (eof) {
         throw std::runtime_error(
-            "unexpected EOF in input source " + state.srcPath.string()
+            "unexpected EOF in input source " + state.outPath.string()
             + " at line " + std::to_string(state.lineno));
     }
 }
 
 void HighlightedFile::writeTo(std::ostream& out) const
 {
-    fs::path originalPath = srcPath();
-    std::ifstream in(originalPath.c_str());
+    fs::path outPath = dstPath();
+    std::ifstream in(srcPath().c_str());
     if (!in) {
         throw std::runtime_error(
-            "Could not reopen source " + originalPath.string());
+            "Could not reopen source " + srcPath().string());
     }
     std::vector<Markup const*> activeTags;
-    OutputState state {in, out, 0, activeTags, originalPath};
+    OutputState state {in, out, 0, activeTags, outPath};
     for (auto const& m : markups) {
         while (!activeTags.empty()
             && m.beginOffset >= activeTags.back()->endOffset
@@ -225,7 +224,7 @@ void HighlightedFile::writeTo(std::ostream& out) const
         }
 
         copyWithLinenosUntilNoEof(state, m.beginOffset);
-        writeBeginTag(m, state.srcPath, out);
+        writeBeginTag(m, state.outPath, out);
         activeTags.push_back(&m);
     }
     bool eof = !copyWithLinenosUntil(state, UINT_MAX);
