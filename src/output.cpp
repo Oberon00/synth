@@ -4,6 +4,7 @@
 #include <fstream>
 #include <climits>
 #include <boost/filesystem.hpp>
+#include <boost/assert.hpp>
 
 using namespace synth;
 
@@ -79,6 +80,7 @@ static char const* getTokenKindCssClass(TokenAttributes attrs)
 
         default:
             assert(false && "Unexpected token kind!");
+            return "";
     }
     SYNTH_DISCLANGWARN_END
 }
@@ -228,7 +230,6 @@ void HighlightedFile::writeTo(std::ostream& out) const
         writeBeginTag(m, state.outPath, out);
         activeTags.push_back(&m);
     }
-    bool eof = !copyWithLinenosUntil(state, UINT_MAX);
-    assert(eof);
+    BOOST_VERIFY(!copyWithLinenosUntil(state, UINT_MAX));
     writeAllEnds(out, activeTags);
 }
