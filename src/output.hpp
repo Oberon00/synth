@@ -86,10 +86,10 @@ constexpr TokenAttributes operator~ (TokenAttributes t)
 }
 
 struct SourceLocation {
-    fs::path const* filename;
+    fs::path const* fname;
     unsigned lineno;
 
-    bool valid() const { return filename != nullptr; }
+    bool valid() const { return fname != nullptr; }
 };
 
 struct Markup {

@@ -93,7 +93,7 @@ static void writeBeginTag(
     out << '<';
     if (m.isRef()) {
         out << "a href=\"";
-        out << relativeUrl(srcPath, *m.refd.filename);
+        out << relativeUrl(srcPath, *m.refd.fname);
         if (m.refd.lineno != 0)
             out << "#L" << m.refd.lineno;
         out << "\" ";

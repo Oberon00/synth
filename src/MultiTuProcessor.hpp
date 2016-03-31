@@ -25,7 +25,7 @@ struct MissingDef {
 };
 
 struct FileEntry {
-    std::string fileName;
+    fs::path fname;
     bool processed;
 };
 

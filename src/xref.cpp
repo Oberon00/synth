@@ -8,10 +8,9 @@ using namespace synth;
 
 void synth::linkSymbol(Markup& m, SourceLocation const& sym)
 {
-    if (!sym.filename)
+    if (!sym.fname)
         return;
-    m.refd.lineno = sym.lineno;
-    m.refd.filename = sym.filename;
+    m.refd = sym;
 }
 
 void synth::linkCursorIfIncludedDst(
@@ -21,10 +20,10 @@ void synth::linkCursorIfIncludedDst(
     unsigned lineno;
     clang_getFileLocation(
         clang_getCursorLocation(dst), &file, &lineno, nullptr, nullptr);
-    fs::path const* filename = state.internFilename(file);
-    if (!filename || lineno == srcLineno)
+    fs::path const* fname = state.internFilename(file);
+    if (!fname || lineno == srcLineno)
         return;
-    return linkSymbol(m, {filename, lineno});
+    return linkSymbol(m, {fname, lineno});
 }
 
 bool synth::linkInclude(
@@ -33,10 +32,10 @@ bool synth::linkInclude(
     MultiTuProcessor& state)
 {
     CXFile file = clang_getIncludedFile(incCursor);
-    fs::path const* filename = state.internFilename(file);
-    if (!filename)
+    fs::path const* fname = state.internFilename(file);
+    if (!fname)
         return false;
-    m.refd.filename = filename;
+    m.refd.fname = fname;
     m.refd.lineno = 0;
     return true;
 }

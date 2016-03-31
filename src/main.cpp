@@ -52,9 +52,9 @@ static std::vector<CgStr> getClArgs(CXCompileCommand cmd)
 
 // Adapted from
 // http://insanecoding.blogspot.co.at/2011/11/how-to-read-in-file-in-c.html
-static std::string getFileContents(char const* filename)
+static std::string getFileContents(char const* fname)
 {
-    std::ifstream in(filename, std::ios::in | std::ios::binary);
+    std::ifstream in(fname, std::ios::in | std::ios::binary);
     in.exceptions(std::ios::badbit);
     std::ostringstream contents;
     contents << in.rdbuf();

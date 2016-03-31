@@ -247,7 +247,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         return;
     }
 
-    m.refd.filename = nullptr;
+    m.refd.fname = nullptr;
     m.attrs = getTokenAttributes(tok, cur, tu);
 
     CXTokenKind tk = clang_getTokenKind(tok);

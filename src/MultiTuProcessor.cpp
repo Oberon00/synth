@@ -43,7 +43,7 @@ MultiTuProcessor::prepareToProcess(CXFile f)
         return {nullptr, UINT_MAX};
     m_outputs.emplace_back();
     HighlightedFile* r = &m_outputs.back();
-    r->originalPath = &fentry->fileName;
+    r->originalPath = &fentry->fname;
     fentry->processed = true;
     return {r, m_outputs.size() - 1};
 }
@@ -51,7 +51,7 @@ MultiTuProcessor::prepareToProcess(CXFile f)
 fs::path const* MultiTuProcessor::internFilename(CXFile f)
 {
     FileEntry* fentry = getFileEntry(f);
-    return fentry ? &fentry->fileName : nullptr;
+    return fentry ? &fentry->fname : nullptr;
 }
 
 FileEntry* MultiTuProcessor::getFileEntry(CXFile f)
