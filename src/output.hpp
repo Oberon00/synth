@@ -86,7 +86,7 @@ constexpr TokenAttributes operator~ (TokenAttributes t)
 }
 
 struct SourceLocation {
-    std::string const* filename;
+    fs::path const* filename;
     unsigned lineno;
 
     bool valid() const { return filename != nullptr; }
@@ -105,7 +105,7 @@ struct Markup {
 };
 
 struct HighlightedFile {
-    std::string const* originalPath;
+    fs::path const* originalPath;
     std::vector<Markup> markups;
 
     // May invalidate references and indexes into markups.

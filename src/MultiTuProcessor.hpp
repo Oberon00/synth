@@ -39,7 +39,7 @@ public:
     bool underRootdir(fs::path const& p) const;
 
     // Returns nullptr if f is not under the rootdir.
-    std::string const* internFilename(CXFile f);
+    fs::path const* internFilename(CXFile f);
 
     std::pair<HighlightedFile*, unsigned> prepareToProcess(CXFile f);
 
@@ -79,7 +79,11 @@ private:
     FileEntryMap m_processedFiles;
     fs::path m_rootdir;
     std::vector<HighlightedFile> m_outputs;
+
+    // Maps from USRs to source location
     std::unordered_map<std::string, SourceLocation> m_defs;
+
+    // Maps from USRs to missing definitions
     std::unordered_map<std::string, std::vector<MissingDef>> m_missingDefs;
 };
 

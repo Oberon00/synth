@@ -2,6 +2,8 @@
 #include "MultiTuProcessor.hpp"
 #include "output.hpp"
 
+#include <boost/filesystem/path.hpp>
+
 using namespace synth;
 
 void synth::linkSymbol(Markup& m, SourceLocation const& sym)
@@ -19,7 +21,7 @@ void synth::linkCursorIfIncludedDst(
     unsigned lineno;
     clang_getFileLocation(
         clang_getCursorLocation(dst), &file, &lineno, nullptr, nullptr);
-    std::string const* filename = state.internFilename(file);
+    fs::path const* filename = state.internFilename(file);
     if (!filename || lineno == srcLineno)
         return;
     return linkSymbol(m, {filename, lineno});
@@ -31,7 +33,7 @@ bool synth::linkInclude(
     MultiTuProcessor& state)
 {
     CXFile file = clang_getIncludedFile(incCursor);
-    std::string const* filename = state.internFilename(file);
+    fs::path const* filename = state.internFilename(file);
     if (!filename)
         return false;
     m.refd.filename = filename;

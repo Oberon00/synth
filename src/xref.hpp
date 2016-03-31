@@ -3,11 +3,8 @@
 
 #include <clang-c/Index.h>
 #include <string>
-#include <boost/filesystem/path.hpp>
 
 namespace synth {
-
-namespace fs = boost::filesystem;
 
 struct Markup;
 struct SourceLocation;

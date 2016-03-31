@@ -199,9 +199,11 @@ static void copyWithLinenosUntilNoEof(OutputState& state, unsigned offset)
 
 void HighlightedFile::writeTo(std::ostream& out) const
 {
-    std::ifstream in(*originalPath);
-    if (!in)
-        throw std::runtime_error("Could not reopen source " + *originalPath);
+    std::ifstream in(originalPath->c_str());
+    if (!in) {
+        throw std::runtime_error(
+            "Could not reopen source " + originalPath->string());
+    }
     std::vector<Markup const*> activeTags;
     OutputState state {in, out, 0, activeTags, *originalPath};
     for (auto const& m : markups) {

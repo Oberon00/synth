@@ -48,7 +48,7 @@ MultiTuProcessor::prepareToProcess(CXFile f)
     return {r, m_outputs.size() - 1};
 }
 
-std::string const* MultiTuProcessor::internFilename(CXFile f)
+fs::path const* MultiTuProcessor::internFilename(CXFile f)
 {
     FileEntry* fentry = getFileEntry(f);
     return fentry ? &fentry->fileName : nullptr;
