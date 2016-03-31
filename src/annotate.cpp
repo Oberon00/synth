@@ -182,9 +182,8 @@ static TokenAttributes getTokenAttributes(
                 case CXCursor_UsingDeclaration:
                 case CXCursor_TemplateRef: {
                     CXCursor refd = clang_getCursorReferenced(cur);
-                    bool selfRef = clang_equalCursors(cur, refd);
                     bool recErr = recursionDepth > kMaxRefRecursion;
-                    if (selfRef || recErr) {
+                    if (recErr) {
                         CgStr kindSp(clang_getCursorKindSpelling(k));
                         CgStr rKindSp(clang_getCursorKindSpelling(
                                 clang_getCursorKind(refd)));
@@ -193,19 +192,16 @@ static TokenAttributes getTokenAttributes(
                                 << CgStr(clang_getTokenSpelling(tu, tok))
                                 << ":\n"
                                 << "  Cursor " << clang_getCursorExtent(cur)
-                                << " " << kindSp << " references ";
-                        if (selfRef) {
-                            std::clog << "itself.\n";
-                        } else {
-                            std::clog << clang_getCursorExtent(refd)
-                                      << " " << rKindSp;
-                        }
-                        std::clog << "  Recursion depth is "
-                                  << recursionDepth << '\n';
-                        if (recErr)
-                            std::clog << "  Maximum depth exceeded.\n";
+                                << " " << kindSp << " references "
+                                << clang_getCursorExtent(refd)
+                                << " " << rKindSp
+                                << "  Maximum depth exceeded with "
+                                << recursionDepth << ".\n";
                         return TokenAttributes::none;
                     }
+
+                    if (clang_equalCursors(cur, refd))
+                        return TokenAttributes::none;
 
                     return getTokenAttributes(
                         tok, refd, tu, recursionDepth + 1);
