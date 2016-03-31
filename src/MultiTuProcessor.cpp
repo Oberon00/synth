@@ -146,6 +146,7 @@ void MultiTuProcessor::writeOutput(SimpleTemplate const& tpl)
         normalAbsolute(fs::current_path()), normalAbsolute(rootOutDir));
     SimpleTemplate::Context ctx;
     m_missingDefs.clear(); // Will be invalidated by the below operations.
+    std::clog << "Writing " << m_processedFiles.size() << " HTML files...\n";
     for (auto& fentry : m_processedFiles) {
         auto& hlFile = fentry.second.hlFile;
         hlFile.prepareOutput();
@@ -162,7 +163,6 @@ void MultiTuProcessor::writeOutput(SimpleTemplate const& tpl)
                 commonRoot ? rootOutDir : hlFile.inOutDir->second, hldir)
             .lexically_normal().string();
         tpl.writeTo(outfile, ctx);
-        std::cout << dstPath << " written\n";
     }
 }
 

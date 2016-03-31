@@ -6,6 +6,7 @@
 #include "CgStr.hpp"
 
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <fstream>
 #include <boost/filesystem.hpp>
@@ -109,6 +110,12 @@ static int executeCmdLine(CmdLineArgs const& args)
             CgStr file(clang_CompileCommand_getFilename(cmd));
             if (!file.empty() && !state.isFileIncluded(file.get()))
                 continue;
+
+            std::clog.flags(std::clog.flags() | std::ios::fixed);
+            std::clog.precision(2);
+            std::clog
+                << '[' << std::setw(6) << i / static_cast<float>(nCmds) * 100 << "%]: "
+                << file << "...\n";
 
             std::vector<CgStr> clArgsHandles = getClArgs(cmd);
             std::vector<char const*> clArgs;

@@ -381,8 +381,6 @@ static void processFile(
             processToken(state, tokens[i], cur);
         }
     }
-    std::cout << "Processed " << numTokens << " tokens in "
-              << hlFile->inOutDir->first / hlFile->fname << '\n';
 }
 
 int synth::processTu(
