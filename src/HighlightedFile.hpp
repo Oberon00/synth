@@ -53,12 +53,12 @@ enum class TokenAttributes : TokenAttributesUnderlying {
     flagDef = 1 << 14
 };
 
-#define SYNTH_DEF_TOKATTR_OP(op)                             \
-    constexpr TokenAttributes operator op (                  \
-        TokenAttributes lhs, TokenAttributes rhs)            \
-    {                                                        \
-        return static_cast<TokenAttributes>(                 \
-            static_cast<TokenAttributesUnderlying>(lhs)      \
+#define SYNTH_DEF_TOKATTR_OP(op)                            \
+    constexpr TokenAttributes operator op (                 \
+        TokenAttributes lhs, TokenAttributes rhs)           \
+    {                                                       \
+        return static_cast<TokenAttributes>(                \
+            static_cast<TokenAttributesUnderlying>(lhs)     \
             op static_cast<TokenAttributesUnderlying>(rhs)); \
     }
 
@@ -85,17 +85,23 @@ constexpr TokenAttributes operator~ (TokenAttributes t)
         ~static_cast<TokenAttributesUnderlying>(t));
 }
 
+struct SourceLocation {
+    std::string const* filename;
+    unsigned lineno;
+
+    bool valid() const { return filename != nullptr; }
+};
+
 struct Markup {
     unsigned begin_offset;
     unsigned end_offset;
 
     TokenAttributes attrs;
 
-    unsigned refdLineno; // Undefined if not a ref, 0 if whole file refd.
-    std::string const* refdFilename; // nullptr if not a ref.
+    SourceLocation refd;
 
     bool empty() const;
-    bool isRef() const { return refdFilename != nullptr; }
+    bool isRef() const { return refd.valid(); }
 };
 
 struct HighlightedFile {

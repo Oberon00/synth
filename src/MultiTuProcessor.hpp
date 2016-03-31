@@ -11,7 +11,6 @@
 #include <boost/optional.hpp>
 #include <boost/filesystem/path.hpp>
 #include "HighlightedFile.hpp"
-#include "SymbolDeclaration.hpp"
 #include "FileIdSupport.hpp"
 
 namespace synth {
@@ -47,9 +46,9 @@ public:
         return m_outputs;
     }
 
-    void registerDef(SymbolDeclaration&& def)
+    void registerDef(std::string&& usr, SourceLocation&& def)
     {
-        m_defs.insert({def.usr, std::move(def)});
+        m_defs.insert({usr, std::move(def)});
     }
 
     void registerMissingDefLink(
@@ -78,7 +77,7 @@ private:
     FileEntryMap m_processedFiles;
     fs::path m_rootdir;
     std::vector<HighlightedFile> m_outputs;
-    std::unordered_map<std::string, SymbolDeclaration> m_defs;
+    std::unordered_map<std::string, SourceLocation> m_defs;
     std::unordered_map<std::string, std::vector<MissingDef>> m_missingDefs;
 };
 

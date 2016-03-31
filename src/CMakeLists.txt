@@ -4,11 +4,10 @@
 
 set(synth_HDRS
     "CgStr.hpp"
-    "FileIdSet.hpp"
+    "FileIdSupport.hpp"
     "HighlightedFile.hpp"
     "MultiTuProcessor.hpp"
     "SimpleTemplate.hpp"
-    "SymbolDeclaration.hpp"
     "cgWrappers.hpp"
     "cmdline.hpp"
     "config.hpp"

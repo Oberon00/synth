@@ -8,8 +8,7 @@
 
 using namespace synth;
 
-static std::string relativeUrl(
-    fs::path const& from, fs::path const& to)
+static std::string relativeUrl(fs::path const& from, fs::path const& to)
 {
     if (to == from)
         return std::string();
@@ -94,9 +93,9 @@ static void writeBeginTag(
     out << '<';
     if (m.isRef()) {
         out << "a href=\"";
-        out << relativeUrl(srcPath, *m.refdFilename);
-        if (m.refdLineno != 0)
-            out << "#L" << m.refdLineno;
+        out << relativeUrl(srcPath, *m.refd.filename);
+        if (m.refd.lineno != 0)
+            out << "#L" << m.refd.lineno;
         out << "\" ";
     } else {
         out << "span ";

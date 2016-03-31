@@ -247,7 +247,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         return;
     }
 
-    m.refdFilename = nullptr;
+    m.refd.filename = nullptr;
     m.attrs = getTokenAttributes(tok, cur, tu);
 
     CXTokenKind tk = clang_getTokenKind(tok);
@@ -300,12 +300,11 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         m.attrs |= TokenAttributes::flagDef;
         CgStr usr(clang_getCursorUSR(cur));
         if (!usr.empty()) {
-            SymbolDeclaration decl {
-                usr.get(),
+            SourceLocation decl {
                 state.hlFile.originalPath,
                 lineno
             };
-            state.multiTuProcessor.registerDef(std::move(decl));
+            state.multiTuProcessor.registerDef(usr.get(), std::move(decl));
         }
     } else if (!isref) {
         if (clang_Cursor_isNull(defcur)) {

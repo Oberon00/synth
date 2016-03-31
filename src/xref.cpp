@@ -1,25 +1,19 @@
 #include "xref.hpp"
-#include "SymbolDeclaration.hpp"
 #include "MultiTuProcessor.hpp"
 #include "HighlightedFile.hpp"
 
 using namespace synth;
 
-void synth::linkSymbol(
-    Markup& m,
-    SymbolDeclaration const& sym)
+void synth::linkSymbol(Markup& m, SourceLocation const& sym)
 {
     if (!sym.filename)
         return;
-    m.refdLineno = sym.lineno;
-    m.refdFilename = sym.filename;
+    m.refd.lineno = sym.lineno;
+    m.refd.filename = sym.filename;
 }
 
 void synth::linkCursorIfIncludedDst(
-    Markup& m,
-    CXCursor dst,
-    unsigned srcLineno,
-    MultiTuProcessor& state)
+    Markup& m, CXCursor dst, unsigned srcLineno, MultiTuProcessor& state)
 {
     CXFile file;
     unsigned lineno;
@@ -28,9 +22,7 @@ void synth::linkCursorIfIncludedDst(
     std::string const* filename = state.internFilename(file);
     if (!filename || lineno == srcLineno)
         return;
-    return linkSymbol(
-        m,
-        {std::string(), filename, lineno});
+    return linkSymbol(m, {filename, lineno});
 }
 
 bool synth::linkInclude(
@@ -42,7 +34,7 @@ bool synth::linkInclude(
     std::string const* filename = state.internFilename(file);
     if (!filename)
         return false;
-    m.refdFilename = filename;
-    m.refdLineno = 0;
+    m.refd.filename = filename;
+    m.refd.lineno = 0;
     return true;
 }

@@ -10,24 +10,15 @@ namespace synth {
 namespace fs = boost::filesystem;
 
 struct Markup;
-struct SymbolDeclaration;
+struct SourceLocation;
 class MultiTuProcessor;
 
-
 void linkCursorIfIncludedDst(
-    Markup& m,
-    CXCursor dst,
-    unsigned srcLineno,
-    MultiTuProcessor& state);
+    Markup& m, CXCursor dst, unsigned srcLineno, MultiTuProcessor& state);
 
-void linkSymbol(
-    Markup& m,
-    SymbolDeclaration const& sym);
+void linkSymbol(Markup& m, SourceLocation const& sym);
 
-bool linkInclude(
-    Markup& m,
-    CXCursor incCursor,
-    MultiTuProcessor& state);
+bool linkInclude(Markup& m, CXCursor incCursor, MultiTuProcessor& state);
 
 } // namespace synth
 
