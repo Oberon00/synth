@@ -19,9 +19,6 @@ static fs::path normalAbsolute(fs::path const& p)
     return r;
 }
 
-
-
-
 // Idea from http://stackoverflow.com/a/15549954/2128694, user Rob Kennedy
 static bool isPathSuffix(fs::path const& dir, fs::path const& p)
 {
@@ -37,8 +34,9 @@ static fs::path commonPrefix(fs::path const& p1, fs::path const& p2)
         if (*it1 != *it2)
             break;
         r /= *it1;
+        ++it1;
+        ++it2;
     }
-
     return r;
 }
 
