@@ -136,6 +136,14 @@ Markup& MultiTuProcessor::markupFromMissingDef(MissingDef const& def)
 
 void MultiTuProcessor::writeOutput(SimpleTemplate const& tpl)
 {
+    if (m_dirs.empty())
+        return;
+    auto it = m_dirs.begin();
+    fs::path rootOutDir = it->second;
+    for (++it; it != m_dirs.end(); ++it)
+        rootOutDir = commonPrefix(rootOutDir, it->second);
+    bool commonRoot = isPathSuffix(
+        normalAbsolute(fs::current_path()), normalAbsolute(rootOutDir));
     SimpleTemplate::Context ctx;
     m_missingDefs.clear(); // Will be invalidated by the below operations.
     for (auto& fentry : m_processedFiles) {
@@ -148,10 +156,10 @@ void MultiTuProcessor::writeOutput(SimpleTemplate const& tpl)
         std::ofstream outfile(dstPath.c_str());
         outfile.exceptions(std::ios::badbit | std::ios::failbit);
         ctx["code"] = SimpleTemplate::ValCallback(std::bind(
-                &HighlightedFile::writeTo, &hlFile, std::placeholders::_1));
+            &HighlightedFile::writeTo, &hlFile, std::placeholders::_1));
         ctx["filename"] = hlFile.fname.string();
-        // TODO: Should we allow an out-rootdir?
-        ctx["rootpath"] = fs::relative(hlFile.inOutDir->second, hldir)
+        ctx["rootpath"] = fs::relative(
+                commonRoot ? rootOutDir : hlFile.inOutDir->second, hldir)
             .lexically_normal().string();
         tpl.writeTo(outfile, ctx);
         std::cout << dstPath << " written\n";
