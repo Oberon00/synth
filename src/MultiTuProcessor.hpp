@@ -7,11 +7,12 @@
 #include <cassert>
 #include <clang-c/Index.h>
 #include <unordered_map>
+#include <unordered_set>
 #include <boost/optional.hpp>
 #include <boost/filesystem/path.hpp>
 #include "HighlightedFile.hpp"
 #include "SymbolDeclaration.hpp"
-#include "FileIdSet.hpp"
+#include "FileIdSupport.hpp"
 
 namespace synth {
 
@@ -65,7 +66,7 @@ private:
     Markup& markupFromMissingDef(MissingDef const& def);
 
     fs::path m_rootdir;
-    FileIdSet m_processedFiles;
+    std::unordered_set<CXFileUniqueID> m_processedFiles;
     std::vector<HighlightedFile> m_outputs;
     std::unordered_map<std::string, SymbolDeclaration> m_defs;
     std::unordered_map<std::string, std::vector<MissingDef>> m_missingDefs;

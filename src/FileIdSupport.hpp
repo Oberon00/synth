@@ -1,7 +1,6 @@
-#ifndef FILE_ID_SET_HPP_INCLUDED
-#define FILE_ID_SET_HPP_INCLUDED
+#ifndef FILE_ID_SUPPORT_HPP_INCLUDED
+#define FILE_ID_SUPPORT_HPP_INCLUDED
 
-#include <unordered_set>
 #include <clang-c/Index.h>
 #include <algorithm>
 
@@ -34,13 +33,6 @@ namespace std {
                 std::begin(rhs.data));
         }
     };
-}
-
-namespace synth {
-
-// TODO: Hash & equal
-using FileIdSet = std::unordered_set<CXFileUniqueID>;
-
 }
 
 #endif
