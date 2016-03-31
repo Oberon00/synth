@@ -75,6 +75,7 @@ static char const* getTokenKindCssClass(TokenAttributes attrs)
         case Tk::varLocal: return "nv"; // Name.Variable
         case Tk::varNonstaticMember: return "vi"; // Name.Variable.Instance
         case Tk::varStaticMember: return "vc"; // Name.Variable.Class
+        case Tk::none: return "";
 
         default:
             assert(false && "Unexpected token kind!");
