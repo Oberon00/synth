@@ -5,6 +5,8 @@
 #include <string>
 #include <cassert>
 
+namespace synth {
+
 class CgStr {
 public:
     CgStr(CXString&& s)
@@ -57,5 +59,7 @@ private:
 
     CXString m_data;
 };
+
+} // namespace synth
 
 #endif
