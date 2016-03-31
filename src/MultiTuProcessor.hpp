@@ -10,7 +10,7 @@
 #include <unordered_set>
 #include <boost/optional.hpp>
 #include <boost/filesystem/path.hpp>
-#include "HighlightedFile.hpp"
+#include "output.hpp"
 #include "FileIdSupport.hpp"
 
 namespace synth {

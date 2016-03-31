@@ -5,21 +5,21 @@
 set(synth_HDRS
     "CgStr.hpp"
     "FileIdSupport.hpp"
-    "HighlightedFile.hpp"
     "MultiTuProcessor.hpp"
     "SimpleTemplate.hpp"
     "cgWrappers.hpp"
     "cmdline.hpp"
     "config.hpp"
+    "output.hpp"
 )
 
 set(synth_SRCS
-    "HighlightedFile.cpp"
     "MultiTuProcessor.cpp"
     "SimpleTemplate.cpp"
     "annotate.cpp"
     "cmdline.cpp"
     "main.cpp"
+    "output.cpp"
     "xref.cpp"
 )
 

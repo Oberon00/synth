@@ -1,6 +1,6 @@
 #include "xref.hpp"
 #include "MultiTuProcessor.hpp"
-#include "HighlightedFile.hpp"
+#include "output.hpp"
 
 using namespace synth;
 

@@ -1,5 +1,5 @@
 #include "CgStr.hpp"
-#include "HighlightedFile.hpp"
+#include "output.hpp"
 #include "MultiTuProcessor.hpp"
 #include "annotate.hpp"
 #include "cgWrappers.hpp"

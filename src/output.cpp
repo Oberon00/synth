@@ -1,4 +1,4 @@
-#include "HighlightedFile.hpp"
+#include "output.hpp"
 #include "config.hpp"
 #include <utility>
 #include <fstream>
