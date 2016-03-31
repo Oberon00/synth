@@ -9,7 +9,7 @@
 #include <iostream>
 #include "xref.hpp"
 
-namespace fs = boost::filesystem;
+using namespace synth;
 
 // Adapted from http://stackoverflow.com/a/15549954/2128694, user Rob Kennedy
 // dir must be an absolute path without filename component.
@@ -23,21 +23,20 @@ static bool isInDir(fs::path const& dir, fs::path p)
     return r;
 }
 
-
-synth::MultiTuProcessor::MultiTuProcessor(fs::path const& rootdir)
+MultiTuProcessor::MultiTuProcessor(fs::path const& rootdir)
     : m_rootdir(fs::absolute(rootdir).lexically_normal())
 {
     if (m_rootdir.filename() == ".")
         m_rootdir.remove_filename();
 }
 
-bool synth::MultiTuProcessor::underRootdir(fs::path const& p) const
+bool MultiTuProcessor::underRootdir(fs::path const& p) const
 {
     return isInDir(m_rootdir, p);
 }
 
 std::pair<synth::HighlightedFile*, unsigned>
-synth::MultiTuProcessor::prepareToProcess(CXFile f)
+MultiTuProcessor::prepareToProcess(CXFile f)
 {
 
     static std::pair<synth::HighlightedFile*, unsigned> const null = {
@@ -59,7 +58,7 @@ synth::MultiTuProcessor::prepareToProcess(CXFile f)
     return {r, m_outputs.size() - 1};
 }
 
-void synth::MultiTuProcessor::resolveMissingRefs()
+void MultiTuProcessor::resolveMissingRefs()
 {
     for (auto it = m_missingDefs.begin(); it != m_missingDefs.end(); ) {
         auto def = m_defs.find(it->first);
@@ -76,8 +75,7 @@ void synth::MultiTuProcessor::resolveMissingRefs()
     }
 }
 
-synth::Markup& synth::MultiTuProcessor::markupFromMissingDef(
-    synth::MissingDef const& def)
+Markup& MultiTuProcessor::markupFromMissingDef(MissingDef const& def)
 {
     assert(def.hlFileIdx < m_outputs.size());
     HighlightedFile& hlFile = m_outputs[def.hlFileIdx];
@@ -85,7 +83,7 @@ synth::Markup& synth::MultiTuProcessor::markupFromMissingDef(
     return hlFile.markups[def.markupIdx];
 }
 
-void synth::MultiTuProcessor::writeOutput(
+void MultiTuProcessor::writeOutput(
     fs::path const& outpath, SimpleTemplate const& tpl)
 {
     m_missingDefs.clear(); // Will be invalidated by the below operations.
