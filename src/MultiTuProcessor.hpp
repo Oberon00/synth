@@ -21,9 +21,13 @@ class SimpleTemplate;
 namespace fs = boost::filesystem;
 
 struct MissingDef {
-    fs::path srcPath;
     std::size_t hlFileIdx;
     std::size_t markupIdx;
+};
+
+struct FileEntry {
+    std::string fileName;
+    bool processed;
 };
 
 class MultiTuProcessor {
@@ -33,7 +37,8 @@ public:
         return MultiTuProcessor(rootdir_);
     }
 
-    bool underRootdir(fs::path const& p) const;
+    // Returns nullptr if f is not under the rootdir.
+    std::string const* internFilename(CXFile f);
 
     std::pair<HighlightedFile*, unsigned> prepareToProcess(CXFile f);
 
@@ -44,16 +49,15 @@ public:
 
     void registerDef(SymbolDeclaration&& def)
     {
-        assert(def.isdef);
         m_defs.insert({def.usr, std::move(def)});
     }
 
     void registerMissingDefLink(
         std::size_t hlFileIdx,
         std::size_t markupIdx,
-        fs::path&& src, std::string&& dstUsr)
+        std::string&& dstUsr)
     {
-        m_missingDefs[dstUsr].push_back({std::move(src), hlFileIdx, markupIdx});
+        m_missingDefs[dstUsr].push_back({hlFileIdx, markupIdx});
     }
 
     void resolveMissingRefs();
@@ -61,12 +65,18 @@ public:
     void writeOutput(fs::path const& outpath, SimpleTemplate const& tpl);
 
 private:
+    using FileEntryMap = std::unordered_map<CXFileUniqueID, FileEntry>;
+
     explicit MultiTuProcessor(fs::path const& rootdir_);
 
     Markup& markupFromMissingDef(MissingDef const& def);
 
+    // Returns nullptr if the file is not under the rootdir.
+    FileEntry* getFileEntry(CXFile f);
+
+
+    FileEntryMap m_processedFiles;
     fs::path m_rootdir;
-    std::unordered_set<CXFileUniqueID> m_processedFiles;
     std::vector<HighlightedFile> m_outputs;
     std::unordered_map<std::string, SymbolDeclaration> m_defs;
     std::unordered_map<std::string, std::vector<MissingDef>> m_missingDefs;

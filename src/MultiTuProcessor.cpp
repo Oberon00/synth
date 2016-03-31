@@ -30,32 +30,37 @@ MultiTuProcessor::MultiTuProcessor(fs::path const& rootdir)
         m_rootdir.remove_filename();
 }
 
-bool MultiTuProcessor::underRootdir(fs::path const& p) const
-{
-    return isInDir(m_rootdir, p);
-}
-
 std::pair<synth::HighlightedFile*, unsigned>
 MultiTuProcessor::prepareToProcess(CXFile f)
 {
-
-    static std::pair<synth::HighlightedFile*, unsigned> const null = {
-        nullptr, UINT_MAX};
-    if (!f)
-        return null;
-    CXFileUniqueID fuid;
-    if (clang_getFileUniqueID(f, &fuid) != 0)
-        return null;
-    if (m_processedFiles.find(fuid) != m_processedFiles.end())
-        return null;
-    CgStr fpath(clang_getFileName(f));
-    if (fpath.empty() || !isInDir(m_rootdir, fpath.get()))
-        return null;
-    m_processedFiles.insert(fuid);
+    FileEntry* fentry = getFileEntry(f);
+    if (!fentry)
+        return {nullptr, UINT_MAX};
     m_outputs.emplace_back();
     HighlightedFile* r = &m_outputs.back();
-    r->originalPath = fpath.get();
+    r->originalPath = &fentry->fileName;
+    fentry->processed = true;
     return {r, m_outputs.size() - 1};
+}
+
+std::string const* MultiTuProcessor::internFilename(CXFile f)
+{
+    FileEntry* fentry = getFileEntry(f);
+    return fentry ? &fentry->fileName : nullptr;
+}
+
+FileEntry* MultiTuProcessor::getFileEntry(CXFile f)
+{
+    CXFileUniqueID fuid;
+    if (!f || clang_getFileUniqueID(f, &fuid) != 0)
+        return nullptr;
+    auto it = m_processedFiles.find(fuid);
+    if (it != m_processedFiles.end())
+        return &it->second;
+    CgStr fname(clang_getFileName(f));
+    if (fname.empty() || !isInDir(m_rootdir, fname.get()))
+        return nullptr;
+    return &m_processedFiles.insert({fuid, {fname.get(), false}}).first->second;
 }
 
 void MultiTuProcessor::resolveMissingRefs()
@@ -65,13 +70,12 @@ void MultiTuProcessor::resolveMissingRefs()
         if (def != m_defs.end()) { // Definition was resolved:
             for (auto const& ref : it->second) {
                 Markup& m = markupFromMissingDef(ref);
-                linkSymbol(m, def->second, ref.srcPath);
+                linkSymbol(m, def->second);
             }
             it = m_missingDefs.erase(it);
         } else {
             ++it;
         }
-
     }
 }
 
@@ -90,7 +94,7 @@ void MultiTuProcessor::writeOutput(
     SimpleTemplate::Context ctx;
     for (auto& hlfile : m_outputs) {
         hlfile.prepareOutput();
-        auto relpath = fs::relative(hlfile.originalPath, m_rootdir);
+        auto relpath = fs::relative(*hlfile.originalPath, m_rootdir);
         auto hlpath = outpath / relpath ;
         hlpath += ".html";
         auto hldir = hlpath.parent_path();
@@ -98,8 +102,8 @@ void MultiTuProcessor::writeOutput(
             fs::create_directories(hldir);
         std::ofstream outfile(hlpath.c_str());
         outfile.exceptions(std::ios::badbit | std::ios::failbit);
-        ctx["code"] = SimpleTemplate::ValCallback(
-            std::bind(&HighlightedFile::writeTo, &hlfile, std::placeholders::_1));
+        ctx["code"] = SimpleTemplate::ValCallback(std::bind(
+                &HighlightedFile::writeTo, &hlfile, std::placeholders::_1));
         ctx["filename"] = relpath.string();
         ctx["rootpath"] = fs::relative(outpath, hlpath.parent_path())
             .lexically_normal().string();

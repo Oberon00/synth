@@ -17,21 +17,17 @@ class MultiTuProcessor;
 void linkCursorIfIncludedDst(
     Markup& m,
     CXCursor dst,
-    fs::path const& srcurl,
     unsigned srcLineno,
-    MultiTuProcessor const& state,
-    bool byUsr);
+    MultiTuProcessor& state);
 
 void linkSymbol(
     Markup& m,
-    SymbolDeclaration const& sym,
-    fs::path const& srcurl);
+    SymbolDeclaration const& sym);
 
 bool linkInclude(
     Markup& m,
     CXCursor incCursor,
-    fs::path const& srcurl,
-    MultiTuProcessor const& state);
+    MultiTuProcessor& state);
 
 } // namespace synth
 

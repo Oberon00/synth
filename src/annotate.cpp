@@ -13,6 +13,16 @@
 
 using namespace synth;
 
+namespace {
+
+struct FileState {
+    HighlightedFile& hlFile;
+    std::size_t hlFileIdx;
+    MultiTuProcessor& multiTuProcessor;
+};
+
+} // anonymous namespace
+
 static bool isTypeKind(CXCursorKind k)
 {
     SYNTH_DISCLANGWARN_BEGIN("-Wswitch-enum")
@@ -45,33 +55,33 @@ static bool isTypeKind(CXCursorKind k)
     SYNTH_DISCLANGWARN_END
 }
 
-static std::string getVarCssClasses(CXCursor cur)
+static TokenAttributes getVarTokenAttributes(CXCursor cur)
 {
     if (clang_getCursorLinkage(cur) == CXLinkage_NoLinkage)
-        return "nv"; // Name.Variable (local)
+        return TokenAttributes::varLocal;
     if (clang_getCXXAccessSpecifier(cur) == CX_CXXInvalidAccessSpecifier)
-        return "vg"; // Name.Variable.Global
+        return TokenAttributes::varGlobal;
     if (clang_Cursor_getStorageClass(cur) == CX_SC_Static)
-        return "vc"; // Name.Variable.Class (static member variable)
-    return "vi"; // Name.Variable.Instance (nonstatic member variable)
+        return TokenAttributes::varStaticMember;
+    return TokenAttributes::varNonstaticMember;
 }
 
-static std::string getIntCssClasses(CXToken tok, CXTranslationUnit tu)
+static TokenAttributes getIntCssClasses(CXToken tok, CXTranslationUnit tu)
 {
     std::string sp = CgStr(clang_getTokenSpelling(tu, tok)).gets();
     if (!sp.empty()) {
         if (sp.size() >= 2 && sp[0] == '0') {
             if (sp[1] == 'x' || sp[1] == 'X')
-                return "mh"; // Number.Hex
+                return TokenAttributes::litNumIntHex;
             if (sp[1] == 'b' || sp[1] == 'B')
-                return "mb"; // Number.Binary
-            return "mo"; // Number.Octal;
+                return TokenAttributes::litNumIntBin;
+            return TokenAttributes::litNumIntOct;
         }
         char suffix = sp[sp.size() - 1];
         if (suffix == 'l' || suffix == 'L')
-            return "il"; // Number.Integer.Long
+            return TokenAttributes::litNumIntDecLong;
     }
-    return "mi"; // Number.
+    return TokenAttributes::litNum;
 }
 
 static bool startsWith(std::string const& s, std::string const& p) {
@@ -97,7 +107,8 @@ static bool isBuiltinTypeKw(std::string const& t) {
         || t == "wchar_t";
 }
 
-static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu)
+static TokenAttributes getTokenAttributes(
+    CXToken tok, CXCursor cur, CXTranslationUnit tu)
 {
     CXCursorKind k = clang_getCursorKind(cur);
     CXTokenKind tk = clang_getTokenKind(tok);
@@ -106,62 +117,60 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
             && (tk == CXToken_Literal || tk == CXToken_Identifier)
         ) {
             CgStr spelling = clang_getTokenSpelling(tu, tok);
-            if (!std::strcmp(spelling.gets(), "cpf")
-            ) {
-                return "cpf";
-            }
+            if (!std::strcmp(spelling.gets(), "include"))
+                return TokenAttributes::preIncludeFile;
         }
-        return "cp";
+        return TokenAttributes::pre;
     }
 
     switch (tk) {
         case CXToken_Punctuation:
             if (k == CXCursor_BinaryOperator || k == CXCursor_UnaryOperator)
-                return "o";
-            return "p";
+                return TokenAttributes::op;
+            return TokenAttributes::punct;
 
         case CXToken_Comment:
-            return "c";
+            return TokenAttributes::cmmt;
 
         case CXToken_Literal:
             SYNTH_DISCLANGWARN_BEGIN("-Wswitch-enum")
             switch (k) {
                 case CXCursor_ObjCStringLiteral:
                 case CXCursor_StringLiteral:
-                    return "s";
+                    return TokenAttributes::litStr;
                 case CXCursor_CharacterLiteral:
-                    return "sc";
+                    return TokenAttributes::litChr;
                 case CXCursor_FloatingLiteral:
-                    return "mf";
+                    return TokenAttributes::litNumFlt;
                 case CXCursor_IntegerLiteral:
                     return getIntCssClasses(tok, tu);
                 case CXCursor_ImaginaryLiteral:
-                    return "m"; // Number
+                    return TokenAttributes::litNum;
                 default:
-                    return "l";
+                    return TokenAttributes::lit;
             }
             SYNTH_DISCLANGWARN_END
 
         case CXToken_Keyword: {
             if (k == CXCursor_BinaryOperator || k == CXCursor_UnaryOperator)
-                return "ow"; // Operator.Word
+                return TokenAttributes::opWord;
             if (k == CXCursor_CXXNullPtrLiteralExpr
                 || k == CXCursor_CXXBoolLiteralExpr
                 || k == CXCursor_ObjCBoolLiteralExpr
             ) {
-                return "nb"; // Name.Builtin
+                return TokenAttributes::litKw;
             }
             std::string sp = CgStr(clang_getTokenSpelling(tu, tok)).gets();
             if (k == CXCursor_TypeRef || isBuiltinTypeKw(sp))
-                return "nt";
+                return TokenAttributes::tyBuiltin;
             if (clang_isDeclaration(k))
-                return "kd";
-            return "k";
+                return TokenAttributes::kwDecl;
+            return TokenAttributes::kw;
         }
 
         case CXToken_Identifier:
             if (isTypeKind(k))
-                return "nc"; // Name.Class
+                return TokenAttributes::ty;
             SYNTH_DISCLANGWARN_BEGIN("-Wswitch-enum")
             switch (k) {
                 case CXCursor_MemberRef:
@@ -170,19 +179,19 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
                 case CXCursor_UsingDeclaration:
                 case CXCursor_TemplateRef: {
                     CXCursor refd = clang_getCursorReferenced(cur);
-                    return getCssClasses(tok, refd, tu);
+                    return getTokenAttributes(tok, refd, tu);
                 }
 
                 case CXCursor_ObjCPropertyDecl:
-                    return "py"; // Name.Variable.Property
+                    return TokenAttributes::varNonstaticMember; // Sorta right.
 
                 case CXCursor_ObjCIvarDecl:
                 case CXCursor_FieldDecl:
-                    return "vi"; // Name.Variable.Instance
+                    return TokenAttributes::varNonstaticMember; // TODO
 
                 case CXCursor_EnumConstantDecl:
                 case CXCursor_NonTypeTemplateParameter:
-                    return "no"; // Name.Constant
+                    return TokenAttributes::constant;
 
                 case CXCursor_FunctionDecl:
                 case CXCursor_ObjCInstanceMethodDecl:
@@ -193,58 +202,52 @@ static std::string getCssClasses(CXToken tok, CXCursor cur, CXTranslationUnit tu
                 case CXCursor_Destructor:
                 case CXCursor_ConversionFunction:
                 case CXCursor_OverloadedDeclRef:
-                    return "nf"; // Name.Function
+                    return TokenAttributes::func;
 
                 case CXCursor_VarDecl:
-                    return getVarCssClasses(cur);
+                    return getVarTokenAttributes(cur);
                 case CXCursor_ParmDecl:
-                    return "nv"; // Name.Variable
+                    return TokenAttributes::varLocal;
 
                 case CXCursor_Namespace:
                 case CXCursor_NamespaceAlias:
                 case CXCursor_UsingDirective:
                 case CXCursor_NamespaceRef:
-                    return "nn"; // Name.Namespace
+                    return TokenAttributes::namesp;
 
                 case CXCursor_LabelStmt:
-                    return "nl"; // Name.Label
+                    return TokenAttributes::lbl;
 
                 default:
                     if (clang_isAttribute(k))
-                        return "nd"; // Name.Decorator
-                    return std::string();
+                        return TokenAttributes::attr;
+                    return TokenAttributes::none;
             }
             SYNTH_DISCLANGWARN_END
             assert("unreachable" && false);
     }
 }
 
-static void processToken(
-    HighlightedFile& out,
-    unsigned outIdx,
-    MultiTuProcessor& state,
-    CXToken tok,
-    CXCursor cur)
+static void processToken(FileState& state, CXToken tok, CXCursor cur)
 {
-    out.markups.emplace_back();
-    Markup& m = out.markups.back();
-    m.tag = Markup::kTagSpan;
+    auto& markups = state.hlFile.markups;
+    markups.emplace_back();
+    Markup& m = markups.back();
     CXTranslationUnit tu = clang_Cursor_getTranslationUnit(cur);
     CXSourceRange rng = clang_getTokenExtent(tu, tok);
     //std::cout << rng << ": " << CgStr(clang_getTokenSpelling(tu, tok)).gets() << '\n';
-    CXFile file;
     unsigned lineno;
     clang_getFileLocation(
-        clang_getRangeStart(rng), &file, &lineno, nullptr, &m.begin_offset);
+        clang_getRangeStart(rng), nullptr, &lineno, nullptr, &m.begin_offset);
     clang_getFileLocation(
         clang_getRangeEnd(rng), nullptr, nullptr, nullptr, &m.end_offset);
     if (m.begin_offset == m.end_offset) {
-        out.markups.pop_back();
+        markups.pop_back();
         return;
     }
-    CgStr srcFname(clang_getFileName(file)); // TODO? make relative to root
-    m.attrs.insert({"class", getCssClasses(tok, cur, tu)});
 
+    m.refdFilename = nullptr;
+    m.attrs = getTokenAttributes(tok, cur, tu);
 
     CXTokenKind tk = clang_getTokenKind(tok);
     if (tk == CXToken_Comment || tk == CXToken_Literal)
@@ -258,24 +261,27 @@ static void processToken(
 
     CXCursorKind k = clang_getCursorKind(cur);
     if (k == CXCursor_InclusionDirective) {
-        Markup im = {};
+        Markup incLnk = {};
         CXSourceRange incrng = clang_getCursorExtent(cur);
         clang_getFileLocation(
             clang_getRangeStart(incrng),
             nullptr,
             nullptr,
             nullptr,
-            &im.begin_offset);
+            &incLnk.begin_offset);
         clang_getFileLocation(
             clang_getRangeEnd(incrng),
             nullptr,
             nullptr,
             nullptr,
-            &im.end_offset);
-        if (linkInclude(im, cur, srcFname.get(), state))
-            out.markups.push_back(std::move(im));
+            &incLnk.end_offset);
+        if (linkInclude(incLnk, cur, state.multiTuProcessor))
+            state.hlFile.markups.push_back(std::move(incLnk));
         return;
     }
+
+    if (clang_isDeclaration(k))
+        m.attrs |= TokenAttributes::flagDecl;
 
     // std::cout << CgStr(clang_getTokenSpelling(tu, tok)).gets()
     //     << " " << CgStr(clang_getCursorKindSpelling(k)).gets() << '\n';
@@ -285,38 +291,32 @@ static void processToken(
     CXCursor referenced = clang_getCursorReferenced(cur);
     bool isref = !clang_Cursor_isNull(referenced)
         && !clang_equalCursors(cur, referenced);
-    if (isref) {
-        linkCursorIfIncludedDst(
-            m, referenced, srcFname.get(), lineno, state, /*byUsr:*/ false);
-    }
+    if (isref)
+        linkCursorIfIncludedDst(m, referenced, lineno, state.multiTuProcessor);
 
     CXCursor defcur = clang_getCursorDefinition(cur);
     if (clang_equalCursors(defcur, cur)) { // This is a definition:
-        m.attrs["class"] += " dfn";
+        m.attrs |= TokenAttributes::flagDef;
         CgStr usr(clang_getCursorUSR(cur));
         if (!usr.empty()) {
             SymbolDeclaration decl {
                 usr.get(),
-                srcFname.get(),
-                lineno,
-                /*isdef=*/ true
+                state.hlFile.originalPath,
+                lineno
             };
-            m.attrs["id"] = decl.usr; // Escape?
-            state.registerDef(std::move(decl));
+            state.multiTuProcessor.registerDef(std::move(decl));
         }
     } else if (!isref) {
         if (clang_Cursor_isNull(defcur)) {
             CgStr usr(clang_getCursorUSR(cur));
             if (!usr.empty()) {
-                state.registerMissingDefLink(
-                    outIdx,
-                    out.markups.size() - 1,
-                    srcFname.get(),
+                state.multiTuProcessor.registerMissingDefLink(
+                    state.hlFileIdx,
+                    state.hlFile.markups.size() - 1,
                     usr.get());
             }
         } else {
-            linkCursorIfIncludedDst(
-                m, defcur, srcFname.get(), lineno, state, /*byUsr:*/ true);
+            linkCursorIfIncludedDst(m, defcur, lineno, state.multiTuProcessor);
         }
     }
 }
@@ -324,7 +324,7 @@ static void processToken(
 namespace {
 
 struct IncVisitorData {
-    MultiTuProcessor& state;
+    MultiTuProcessor& multiTuProcessor;
     CXTranslationUnit tu;
 };
 
@@ -335,12 +335,12 @@ static void processFile(
 {
     auto& cdata = *static_cast<IncVisitorData*>(ud);
     CXTranslationUnit tu = cdata.tu;
-    MultiTuProcessor& state = cdata.state;
+    MultiTuProcessor& multiTuProcessor = cdata.multiTuProcessor;
 
     CXSourceLocation beg = clang_getLocationForOffset(tu, file, 0);
     CXSourceLocation end = clang_getLocation(tu, file, UINT_MAX, UINT_MAX);
 
-    auto output = state.prepareToProcess(file);
+    auto output = multiTuProcessor.prepareToProcess(file);
     if (!output.first)
         return;
 
@@ -350,6 +350,7 @@ static void processFile(
     CgTokensCleanup tokCleanup(tokens, numTokens, tu);
 
     if (numTokens > 0) {
+        FileState state {*output.first, output.second, multiTuProcessor};
         std::vector<CXCursor> tokCurs(numTokens);
         clang_annotateTokens(tu, tokens, numTokens, tokCurs.data());
         for (unsigned i = 0; i < numTokens - 1; ++i) {
@@ -360,12 +361,11 @@ static void processFile(
                 if (clang_equalLocations(clang_getCursorLocation(c2), tokLoc))
                     cur = c2;
             }
-            processToken(
-                *output.first, output.second, state, tokens[i], cur);
+            processToken(state, tokens[i], cur);
         }
     }
     std::cout << "Processed " << numTokens << " tokens in "
-              << CgStr(clang_getFileName(file)).gets() << '\n';
+              << *output.first->originalPath << '\n';
 }
 
 int synth::processTu(

@@ -6,31 +6,100 @@
 #include <unordered_map>
 #include <boost/filesystem/path.hpp>
 #include <iosfwd>
+#include <cstdint>
 
 namespace synth {
 
 namespace fs = boost::filesystem;
 
-struct PrimitiveTag {
-    unsigned offset;
-    std::string content;
+using TokenAttributesUnderlying = std::uint16_t;
+
+enum class TokenAttributes : TokenAttributesUnderlying {
+    none,
+
+    attr,
+    cmmt,
+    constant, // Enumerator, non-type template param.
+    func,
+    kw,
+    kwDecl,
+    lbl,
+    lit,
+    litChr,
+    litKw, // true, false, nullptr
+    litNum,
+    litNumFlt,
+    litNumIntBin,
+    litNumIntDecLong,
+    litNumIntHex,
+    litNumIntOct,
+    litStr,
+    namesp,
+    op,
+    opWord,
+    pre,
+    preIncludeFile,
+    punct,
+    ty,
+    tyBuiltin,
+    varGlobal,
+    varLocal,
+    varNonstaticMember,
+    varStaticMember,
+
+    maskKind = 0x3ff, // 1023 kinds
+
+    flagDecl = 1 << 15,
+    flagDef = 1 << 14
 };
 
+#define SYNTH_DEF_TOKATTR_OP(op)                             \
+    constexpr TokenAttributes operator op (                  \
+        TokenAttributes lhs, TokenAttributes rhs)            \
+    {                                                        \
+        return static_cast<TokenAttributes>(                 \
+            static_cast<TokenAttributesUnderlying>(lhs)      \
+            op static_cast<TokenAttributesUnderlying>(rhs)); \
+    }
+
+SYNTH_DEF_TOKATTR_OP(|)
+SYNTH_DEF_TOKATTR_OP(&)
+SYNTH_DEF_TOKATTR_OP(^)
+
+#define SYNTH_DEF_TOKATTR_ASSIGN_OP(op)                       \
+    constexpr TokenAttributes operator op (                   \
+        TokenAttributes& lhs, TokenAttributes rhs)            \
+    {                                                         \
+        auto r = static_cast<TokenAttributesUnderlying>(lhs); \
+        r op static_cast<TokenAttributesUnderlying>(rhs);     \
+        return lhs = static_cast<TokenAttributes>(r);         \
+    }
+
+SYNTH_DEF_TOKATTR_ASSIGN_OP(|=)
+SYNTH_DEF_TOKATTR_ASSIGN_OP(&=)
+SYNTH_DEF_TOKATTR_ASSIGN_OP(^=)
+
+constexpr TokenAttributes operator~ (TokenAttributes t)
+{
+    return static_cast<TokenAttributes>(
+        ~static_cast<TokenAttributesUnderlying>(t));
+}
+
 struct Markup {
-    char const* tag;
-    std::unordered_map<std::string, std::string> attrs;
     unsigned begin_offset;
     unsigned end_offset;
 
-    PrimitiveTag begin_tag() const;
-    PrimitiveTag end_tag() const;
+    TokenAttributes attrs;
 
-    static constexpr char const* kTagSpan = "span";
-    static constexpr char const* kTagLink = "a";
+    unsigned refdLineno; // Undefined if not a ref, 0 if whole file refd.
+    std::string const* refdFilename; // nullptr if not a ref.
+
+    bool empty() const;
+    bool isRef() const { return refdFilename != nullptr; }
 };
 
 struct HighlightedFile {
-    std::string originalPath;
+    std::string const* originalPath;
     std::vector<Markup> markups;
 
     // May invalidate references and indexes into markups.

@@ -7,9 +7,8 @@ namespace synth {
 
 struct SymbolDeclaration {
     std::string usr;
-    std::string filename; // TODO Make reference to reduce memory consumption.
+    std::string const* filename;
     unsigned lineno;
-    bool isdef; // Is this declaration also a definition?
 };
 
 }
