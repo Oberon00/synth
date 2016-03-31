@@ -30,6 +30,11 @@ MultiTuProcessor::MultiTuProcessor(fs::path const& rootdir)
         m_rootdir.remove_filename();
 }
 
+bool MultiTuProcessor::underRootdir(fs::path const& p) const
+{
+    return isInDir(m_rootdir, p);
+}
+
 std::pair<synth::HighlightedFile*, unsigned>
 MultiTuProcessor::prepareToProcess(CXFile f)
 {

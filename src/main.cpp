@@ -79,7 +79,7 @@ static int executeCmdLine(CmdLineArgs const& args)
             /*excludeDeclarationsFromPCH:*/ true,
             /*displayDiagnostics:*/ true));
 
-    auto state(MultiTuProcessor::forRootdir(std::move(args.rootdir)));
+    auto state = MultiTuProcessor::forRootdir(std::move(args.rootdir));
 
     if (args.compilationDbDir) {
         CXCompilationDatabase_Error err;
@@ -104,6 +104,11 @@ static int executeCmdLine(CmdLineArgs const& args)
         for (unsigned i = 0; i < nCmds; ++i) {
             CXCompileCommand cmd = clang_CompileCommands_getCommand(
                 cmds.get(), i);
+
+            CgStr file(clang_CompileCommand_getFilename(cmd));
+            if (!file.empty() && !state.underRootdir(file.get()))
+                continue;
+
             std::vector<CgStr> clArgsHandles = getClArgs(cmd);
             std::vector<char const*> clArgs;
             clArgs.reserve(clArgsHandles.size() + args.clangArgs.size());

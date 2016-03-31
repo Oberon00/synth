@@ -36,6 +36,8 @@ public:
         return MultiTuProcessor(rootdir_);
     }
 
+    bool underRootdir(fs::path const& p) const;
+
     // Returns nullptr if f is not under the rootdir.
     std::string const* internFilename(CXFile f);
 
