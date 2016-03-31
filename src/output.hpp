@@ -85,11 +85,13 @@ constexpr TokenAttributes operator~ (TokenAttributes t)
         ~static_cast<TokenAttributesUnderlying>(t));
 }
 
+struct HighlightedFile;
+
 struct SourceLocation {
-    fs::path const* fname;
+    HighlightedFile const* file;
     unsigned lineno;
 
-    bool valid() const { return fname != nullptr; }
+    bool valid() const { return file != nullptr; }
 };
 
 struct Markup {
@@ -105,7 +107,13 @@ struct Markup {
 };
 
 struct HighlightedFile {
-    fs::path const* originalPath;
+    // Relative to inOutDir: first / fname: original, second / fname: dst.
+    fs::path fname;
+    std::pair<fs::path, fs::path> const* inOutDir;
+
+    fs::path dstPath() const;
+    fs::path srcPath() const { return inOutDir->first / fname; }
+
     std::vector<Markup> markups;
 
     // May invalidate references and indexes into markups.

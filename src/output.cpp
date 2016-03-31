@@ -13,13 +13,20 @@ static std::string relativeUrl(fs::path const& from, fs::path const& to)
     if (to == from)
         return std::string();
     fs::path r = fs::relative(to, from.parent_path());
-    return r == "." ? std::string() : r.string() + ".html";
+    return r == "." ? std::string() : r.string();
 }
 
 bool Markup::empty() const
 {
     return beginOffset == endOffset
         || (attrs == TokenAttributes::none && !isRef());
+}
+
+fs::path HighlightedFile::dstPath() const
+{
+    fs::path r = inOutDir->second / fname;
+    r += ".html";
+    return r;
 }
 
 void HighlightedFile::prepareOutput()
@@ -93,7 +100,7 @@ static void writeBeginTag(
     out << '<';
     if (m.isRef()) {
         out << "a href=\"";
-        out << relativeUrl(srcPath, *m.refd.fname);
+        out << relativeUrl(srcPath, m.refd.file->dstPath());
         if (m.refd.lineno != 0)
             out << "#L" << m.refd.lineno;
         out << "\" ";
@@ -199,13 +206,14 @@ static void copyWithLinenosUntilNoEof(OutputState& state, unsigned offset)
 
 void HighlightedFile::writeTo(std::ostream& out) const
 {
-    std::ifstream in(originalPath->c_str());
+    fs::path originalPath = srcPath();
+    std::ifstream in(originalPath.c_str());
     if (!in) {
         throw std::runtime_error(
-            "Could not reopen source " + originalPath->string());
+            "Could not reopen source " + originalPath.string());
     }
     std::vector<Markup const*> activeTags;
-    OutputState state {in, out, 0, activeTags, *originalPath};
+    OutputState state {in, out, 0, activeTags, originalPath};
     for (auto const& m : markups) {
         while (!activeTags.empty()
             && m.beginOffset >= activeTags.back()->endOffset

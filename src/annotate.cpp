@@ -17,7 +17,6 @@ namespace {
 
 struct FileState {
     HighlightedFile& hlFile;
-    std::size_t hlFileIdx;
     MultiTuProcessor& multiTuProcessor;
 };
 
@@ -247,7 +246,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         return;
     }
 
-    m.refd.fname = nullptr;
+    m.refd.file = nullptr;
     m.attrs = getTokenAttributes(tok, cur, tu);
 
     CXTokenKind tk = clang_getTokenKind(tok);
@@ -300,10 +299,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         m.attrs |= TokenAttributes::flagDef;
         CgStr usr(clang_getCursorUSR(cur));
         if (!usr.empty()) {
-            SourceLocation decl {
-                state.hlFile.originalPath,
-                lineno
-            };
+            SourceLocation decl {&state.hlFile, lineno};
             state.multiTuProcessor.registerDef(usr.get(), std::move(decl));
         }
     } else if (!isref) {
@@ -311,7 +307,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
             CgStr usr(clang_getCursorUSR(cur));
             if (!usr.empty()) {
                 state.multiTuProcessor.registerMissingDefLink(
-                    state.hlFileIdx,
+                    state.hlFile,
                     state.hlFile.markups.size() - 1,
                     usr.get());
             }
@@ -340,8 +336,8 @@ static void processFile(
     CXSourceLocation beg = clang_getLocationForOffset(tu, file, 0);
     CXSourceLocation end = clang_getLocation(tu, file, UINT_MAX, UINT_MAX);
 
-    auto output = multiTuProcessor.prepareToProcess(file);
-    if (!output.first)
+    auto hlFile = multiTuProcessor.prepareToProcess(file);
+    if (!hlFile)
         return;
 
     CXToken* tokens;
@@ -350,7 +346,7 @@ static void processFile(
     CgTokensCleanup tokCleanup(tokens, numTokens, tu);
 
     if (numTokens > 0) {
-        FileState state {*output.first, output.second, multiTuProcessor};
+        FileState state {*hlFile, multiTuProcessor};
         std::vector<CXCursor> tokCurs(numTokens);
         clang_annotateTokens(tu, tokens, numTokens, tokCurs.data());
         for (unsigned i = 0; i < numTokens - 1; ++i) {
@@ -365,7 +361,7 @@ static void processFile(
         }
     }
     std::cout << "Processed " << numTokens << " tokens in "
-              << *output.first->originalPath << '\n';
+              << hlFile->inOutDir->first / hlFile->fname << '\n';
 }
 
 int synth::processTu(

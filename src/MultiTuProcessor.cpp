@@ -11,50 +11,85 @@
 
 using namespace synth;
 
-// Adapted from http://stackoverflow.com/a/15549954/2128694, user Rob Kennedy
-// dir must be an absolute path without filename component.
-static bool isInDir(fs::path const& dir, fs::path p)
+static fs::path normalAbsolute(fs::path const& p)
 {
-    p = fs::absolute(std::move(p)).lexically_normal();
+    fs::path r = fs::absolute(p).lexically_normal();
+    if (r.filename() == ".")
+        r.remove_filename();
+    return r;
+}
 
-    bool r = std::mismatch(dir.begin(), dir.end(), p.begin(), p.end()).first
+
+
+
+// Idea from http://stackoverflow.com/a/15549954/2128694, user Rob Kennedy
+static bool isPathSuffix(fs::path const& dir, fs::path const& p)
+{
+    return std::mismatch(dir.begin(), dir.end(), p.begin(), p.end()).first
         == dir.end();
+}
+
+static fs::path commonPrefix(fs::path const& p1, fs::path const& p2)
+{
+    auto it1 = p1.begin(), it2 = p2.begin();
+    fs::path r;
+    while (it1 != p1.end() && it2 != p2.end()) {
+        if (*it1 != *it2)
+            break;
+        r /= *it1;
+    }
 
     return r;
 }
 
-MultiTuProcessor::MultiTuProcessor(fs::path const& rootdir)
-    : m_rootdir(fs::absolute(rootdir).lexically_normal())
+MultiTuProcessor::MultiTuProcessor(PathMap const& dirs)
 {
-    if (m_rootdir.filename() == ".")
-        m_rootdir.remove_filename();
+    if (dirs.empty())
+        return;
+    m_rootInDir = dirs.begin()->first;
+    for (auto const& kv : dirs) {
+        fs::path inDir = normalAbsolute(kv.first);
+        m_dirs.push_back({inDir, kv.second});
+        m_rootInDir = commonPrefix(std::move(m_rootInDir), inDir);
+    }
 }
 
-bool MultiTuProcessor::underRootdir(fs::path const& p) const
+bool MultiTuProcessor::isFileIncluded(fs::path const& p) const
 {
-    return isInDir(m_rootdir, p);
+    return getFileMapping(p) != nullptr;
 }
 
-std::pair<synth::HighlightedFile*, unsigned>
-MultiTuProcessor::prepareToProcess(CXFile f)
+PathMap::value_type const* MultiTuProcessor::getFileMapping(
+    fs::path const& p) const
 {
-    FileEntry* fentry = getFileEntry(f);
-    if (!fentry)
-        return {nullptr, UINT_MAX};
-    m_outputs.emplace_back();
-    HighlightedFile* r = &m_outputs.back();
-    r->originalPath = &fentry->fname;
+    fs::path cleanP = normalAbsolute(p);
+    if (!isPathSuffix(m_rootInDir, cleanP))
+        return nullptr;
+
+    for (auto const& kv : m_dirs) {
+        if (isPathSuffix(kv.first, cleanP))
+            return &kv;
+    }
+    return nullptr;
+}
+
+HighlightedFile* MultiTuProcessor::prepareToProcess(CXFile f)
+{
+    FileEntry* fentry = obtainFileEntry(f);
+    if (!fentry || fentry->processed)
+        return nullptr;
     fentry->processed = true;
-    return {r, m_outputs.size() - 1};
+    return &fentry->hlFile;
 }
 
-fs::path const* MultiTuProcessor::internFilename(CXFile f)
+HighlightedFile const* MultiTuProcessor::referenceFilename(CXFile f)
 {
-    FileEntry* fentry = getFileEntry(f);
-    return fentry ? &fentry->fname : nullptr;
+    FileEntry* fentry = obtainFileEntry(f);
+    return fentry ? &fentry->hlFile : nullptr;
 }
 
-FileEntry* MultiTuProcessor::getFileEntry(CXFile f)
+
+FileEntry* MultiTuProcessor::obtainFileEntry(CXFile f)
 {
     CXFileUniqueID fuid;
     if (!f || clang_getFileUniqueID(f, &fuid) != 0)
@@ -62,10 +97,21 @@ FileEntry* MultiTuProcessor::getFileEntry(CXFile f)
     auto it = m_processedFiles.find(fuid);
     if (it != m_processedFiles.end())
         return &it->second;
-    CgStr fname(clang_getFileName(f));
-    if (fname.empty() || !isInDir(m_rootdir, fname.get()))
+    fs::path fname(CgStr(clang_getFileName(f)).gets());
+    if (fname.empty())
         return nullptr;
-    return &m_processedFiles.insert({fuid, {fname.get(), false}}).first->second;
+    auto mapping = getFileMapping(fname);
+    if (!mapping)
+        return nullptr;
+    fname = fs::relative(std::move(fname), mapping->first);
+    FileEntry entry = {
+        /*processed=*/ false,
+        /*hlFile=*/ {
+            /*fname=*/ fname,
+            /*inOutDir=*/ mapping,
+            /*markups=*/ {}
+        }};
+    return &m_processedFiles.insert({fuid, std::move(entry)}).first->second;
 }
 
 void MultiTuProcessor::resolveMissingRefs()
@@ -86,34 +132,30 @@ void MultiTuProcessor::resolveMissingRefs()
 
 Markup& MultiTuProcessor::markupFromMissingDef(MissingDef const& def)
 {
-    assert(def.hlFileIdx < m_outputs.size());
-    HighlightedFile& hlFile = m_outputs[def.hlFileIdx];
-    assert(def.markupIdx < hlFile.markups.size());
-    return hlFile.markups[def.markupIdx];
+    assert(def.markupIdx < def.hlFile->markups.size());
+    return def.hlFile->markups[def.markupIdx];
 }
 
-void MultiTuProcessor::writeOutput(
-    fs::path const& outpath, SimpleTemplate const& tpl)
+void MultiTuProcessor::writeOutput(SimpleTemplate const& tpl)
 {
-    m_missingDefs.clear(); // Will be invalidated by the below operations.
     SimpleTemplate::Context ctx;
-    for (auto& hlfile : m_outputs) {
-        hlfile.prepareOutput();
-        auto relpath = fs::relative(*hlfile.originalPath, m_rootdir);
-        auto hlpath = outpath / relpath ;
-        hlpath += ".html";
-        auto hldir = hlpath.parent_path();
+    m_missingDefs.clear(); // Will be invalidated by the below operations.
+    for (auto& fentry : m_processedFiles) {
+        auto& hlFile = fentry.second.hlFile;
+        hlFile.prepareOutput();
+        auto dstPath = hlFile.dstPath();
+        auto hldir = dstPath.parent_path();
         if (hldir != ".")
             fs::create_directories(hldir);
-        std::ofstream outfile(hlpath.c_str());
+        std::ofstream outfile(dstPath.c_str());
         outfile.exceptions(std::ios::badbit | std::ios::failbit);
         ctx["code"] = SimpleTemplate::ValCallback(std::bind(
-                &HighlightedFile::writeTo, &hlfile, std::placeholders::_1));
-        ctx["filename"] = relpath.string();
-        ctx["rootpath"] = fs::relative(outpath, hlpath.parent_path())
+                &HighlightedFile::writeTo, &hlFile, std::placeholders::_1));
+        ctx["filename"] = hlFile.fname.string();
+        ctx["rootpath"] = fs::relative(hlFile.inOutDir->second, hldir)
             .lexically_normal().string();
         tpl.writeTo(outfile, ctx);
-        std::cout << hlpath << " written\n";
+        std::cout << dstPath << " written\n";
     }
 }
 

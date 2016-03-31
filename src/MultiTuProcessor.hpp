@@ -20,33 +20,30 @@ class SimpleTemplate;
 namespace fs = boost::filesystem;
 
 struct MissingDef {
-    std::size_t hlFileIdx;
+    HighlightedFile* hlFile;
     std::size_t markupIdx;
 };
 
 struct FileEntry {
-    fs::path fname;
     bool processed;
+    HighlightedFile hlFile;
 };
+
+using PathMap = std::vector<std::pair<fs::path, fs::path>>;
 
 class MultiTuProcessor {
 public:
-    static MultiTuProcessor forRootdir(fs::path const& rootdir_)
+    static MultiTuProcessor forRootdirs(PathMap const& dirs)
     {
-        return MultiTuProcessor(rootdir_);
+        return MultiTuProcessor(dirs);
     }
 
-    bool underRootdir(fs::path const& p) const;
+    bool isFileIncluded(fs::path const& p) const;
 
-    // Returns nullptr if f is not under the rootdir.
-    fs::path const* internFilename(CXFile f);
+    // Returns nullptr if f should be ignored.
+    HighlightedFile const* referenceFilename(CXFile f);
 
-    std::pair<HighlightedFile*, unsigned> prepareToProcess(CXFile f);
-
-    std::vector<HighlightedFile> const& outputs() const
-    {
-        return m_outputs;
-    }
+    HighlightedFile* prepareToProcess(CXFile f);
 
     void registerDef(std::string&& usr, SourceLocation&& def)
     {
@@ -54,37 +51,41 @@ public:
     }
 
     void registerMissingDefLink(
-        std::size_t hlFileIdx,
+        HighlightedFile& file,
         std::size_t markupIdx,
         std::string&& dstUsr)
     {
-        m_missingDefs[dstUsr].push_back({hlFileIdx, markupIdx});
+        m_missingDefs[dstUsr].push_back({&file, markupIdx});
     }
 
     void resolveMissingRefs();
 
-    void writeOutput(fs::path const& outpath, SimpleTemplate const& tpl);
+    void writeOutput(SimpleTemplate const& tpl);
 
 private:
     using FileEntryMap = std::unordered_map<CXFileUniqueID, FileEntry>;
 
-    explicit MultiTuProcessor(fs::path const& rootdir_);
+    explicit MultiTuProcessor(PathMap const& rootdir_);
 
     Markup& markupFromMissingDef(MissingDef const& def);
 
-    // Returns nullptr if the file is not under the rootdir.
-    FileEntry* getFileEntry(CXFile f);
+    // Returns nullptr if f should be ignored.
+    FileEntry* obtainFileEntry(CXFile f);
+
+    PathMap::value_type const* getFileMapping(fs::path const& p) const;
 
 
     FileEntryMap m_processedFiles;
-    fs::path m_rootdir;
-    std::vector<HighlightedFile> m_outputs;
+    PathMap m_dirs;
 
     // Maps from USRs to source location
     std::unordered_map<std::string, SourceLocation> m_defs;
 
     // Maps from USRs to missing definitions
     std::unordered_map<std::string, std::vector<MissingDef>> m_missingDefs;
+
+    // Common prefix of all keys in m_dirs
+    fs::path m_rootInDir;
 };
 
 } // namespace synth
