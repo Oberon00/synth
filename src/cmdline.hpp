@@ -7,8 +7,7 @@
 namespace synth {
 
 struct CmdLineArgs {
-    char const* rootdir;
-    char const* outdir;
+    std::vector<std::pair<char const*, char const*>> inOutDirs;
     char const* templateFile;
 
     int nClangArgs;

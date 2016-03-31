@@ -79,7 +79,8 @@ static int executeCmdLine(CmdLineArgs const& args)
             /*excludeDeclarationsFromPCH:*/ true,
             /*displayDiagnostics:*/ true));
 
-    auto state = MultiTuProcessor::forRootdirs({{args.rootdir, args.outdir}});
+    auto state = MultiTuProcessor::forRootdirs(
+        PathMap(args.inOutDirs.begin(), args.inOutDirs.end()));
 
     if (args.compilationDbDir) {
         CXCompilationDatabase_Error err;

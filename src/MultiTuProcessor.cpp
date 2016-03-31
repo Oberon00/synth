@@ -152,6 +152,7 @@ void MultiTuProcessor::writeOutput(SimpleTemplate const& tpl)
         ctx["code"] = SimpleTemplate::ValCallback(std::bind(
                 &HighlightedFile::writeTo, &hlFile, std::placeholders::_1));
         ctx["filename"] = hlFile.fname.string();
+        // TODO: Should we allow an out-rootdir?
         ctx["rootpath"] = fs::relative(hlFile.inOutDir->second, hldir)
             .lexically_normal().string();
         tpl.writeTo(outfile, ctx);
