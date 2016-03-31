@@ -5,6 +5,7 @@
 #include "cgWrappers.hpp"
 #include "config.hpp"
 #include "xref.hpp"
+#include "debug.hpp"
 
 #include <climits>
 #include <cstring>
@@ -21,19 +22,6 @@ struct FileState {
     HighlightedFile& hlFile;
     MultiTuProcessor& multiTuProcessor;
 };
-
-std::ostream& operator<< (std::ostream& out, CXSourceRange rng)
-{
-    CXSourceLocation beg = clang_getRangeStart(rng);
-    CXFile f;
-    unsigned lineno, col;
-    clang_getFileLocation(beg, &f, &lineno, &col, nullptr);
-    out << CgStr(clang_getFileName(f)).gets() << ':' << lineno << ':' << col;
-
-    CXSourceLocation end = clang_getRangeEnd(rng);
-    clang_getFileLocation(end, nullptr, &lineno, &col, nullptr);
-    return out << '-' << lineno << ':' << col;
-}
 
 } // anonymous namespace
 

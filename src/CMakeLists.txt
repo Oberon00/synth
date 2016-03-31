@@ -18,6 +18,7 @@ set(synth_SRCS
     "SimpleTemplate.cpp"
     "annotate.cpp"
     "cmdline.cpp"
+    "debug.cpp"
     "main.cpp"
     "output.cpp"
     "xref.cpp"
