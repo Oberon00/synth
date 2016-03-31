@@ -10,7 +10,7 @@ std::ostream& synth::operator<< (std::ostream& out, CXSourceRange rng)
     CXFile f;
     unsigned lineno, col;
     clang_getFileLocation(beg, &f, &lineno, &col, nullptr);
-    out << CgStr(clang_getFileName(f)).gets() << ':' << lineno << ':' << col;
+    out << CgStr(clang_getFileName(f)) << ':' << lineno << ':' << col;
 
     CXSourceLocation end = clang_getRangeEnd(rng);
     clang_getFileLocation(end, nullptr, &lineno, &col, nullptr);
@@ -19,14 +19,14 @@ std::ostream& synth::operator<< (std::ostream& out, CXSourceRange rng)
 
 std::ostream& synth::operator<< (std::ostream& out, CXCursor c)
 {
-    out << CgStr(clang_getCursorKindSpelling(clang_getCursorKind(c))).gets()
+    out << CgStr(clang_getCursorKindSpelling(clang_getCursorKind(c)))
         << ' ' << clang_getCursorExtent(c);
     CgStr dn(clang_getCursorDisplayName(c));
     if (!dn.empty())
-        out << " D:" << dn.gets();
+        out << " D:" << dn;
     CgStr sp(clang_getCursorSpelling(c));
     if (!sp.empty())
-        out << " S:" << dn.gets();
+        out << " S:" << sp;
     return out;
 }
 

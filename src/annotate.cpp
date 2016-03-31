@@ -190,15 +190,15 @@ static TokenAttributes getTokenAttributes(
                                 clang_getCursorKind(refd)));
                         std::clog << "When trying to highlight token "
                                 << clang_getTokenExtent(tu, tok) << " "
-                                << CgStr(clang_getTokenSpelling(tu, tok)).gets()
+                                << CgStr(clang_getTokenSpelling(tu, tok))
                                 << ":\n"
                                 << "  Cursor " << clang_getCursorExtent(cur)
-                                << " " << kindSp.gets() << " references ";
+                                << " " << kindSp << " references ";
                         if (selfRef) {
                             std::clog << "itself.\n";
                         } else {
                             std::clog << clang_getCursorExtent(refd)
-                                      << " " << rKindSp.gets();
+                                      << " " << rKindSp;
                         }
                         std::clog << "  Recursion depth is "
                                   << recursionDepth << '\n';
@@ -264,7 +264,6 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
     Markup& m = markups.back();
     CXTranslationUnit tu = clang_Cursor_getTranslationUnit(cur);
     CXSourceRange rng = clang_getTokenExtent(tu, tok);
-    //std::cout << rng << ": " << CgStr(clang_getTokenSpelling(tu, tok)).gets() << '\n';
     unsigned lineno;
     clang_getFileLocation(
         clang_getRangeStart(rng), nullptr, &lineno, nullptr, &m.beginOffset);
@@ -311,9 +310,6 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
 
     if (clang_isDeclaration(k))
         m.attrs |= TokenAttributes::flagDecl;
-
-    // std::cout << CgStr(clang_getTokenSpelling(tu, tok)).gets()
-    //     << " " << CgStr(clang_getCursorKindSpelling(k)).gets() << '\n';
 
     // clang_isReference() sometimes reports false negatives, e.g. for
     // overloaded operators, so check manually.

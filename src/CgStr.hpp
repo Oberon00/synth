@@ -2,8 +2,9 @@
 #define SYNTH_LIBCLANG_HPP_INCLUDED
 
 #include "clang-c/CXString.h"
-#include <string>
 #include <cassert>
+#include <ostream>
+#include <string>
 
 namespace synth {
 
@@ -59,6 +60,11 @@ private:
 
     CXString m_data;
 };
+
+inline std::ostream& operator<< (std::ostream& out, CgStr const& s)
+{
+    return out << s.gets();
+}
 
 } // namespace synth
 
