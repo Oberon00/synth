@@ -1,18 +1,19 @@
+#include "CgStr.hpp"
 #include "MultiTuProcessor.hpp"
 #include "SimpleTemplate.hpp"
 #include "annotate.hpp"
 #include "cgWrappers.hpp"
 #include "cmdline.hpp"
-#include "CgStr.hpp"
 
-#include <iostream>
-#include <iomanip>
-#include <sstream>
-#include <fstream>
-#include <thread>
-#include <condition_variable>
 #include <boost/filesystem.hpp>
 #include <boost/io/ios_state.hpp>
+
+#include <condition_variable>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <thread>
 
 using namespace synth;
 

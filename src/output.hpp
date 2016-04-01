@@ -1,12 +1,13 @@
 #ifndef SYNTH_HIGHLIGTHED_FILE_HPP_INCLUDED
 #define SYNTH_HIGHLIGTHED_FILE_HPP_INCLUDED
 
-#include <string>
-#include <vector>
-#include <unordered_map>
 #include <boost/filesystem/path.hpp>
-#include <iosfwd>
+
 #include <cstdint>
+#include <iosfwd>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace synth {
 

@@ -1,10 +1,14 @@
 #include "output.hpp"
+
 #include "config.hpp"
-#include <utility>
-#include <fstream>
-#include <climits>
-#include <boost/filesystem.hpp>
+
 #include <boost/assert.hpp>
+#include <boost/filesystem.hpp>
+
+#include <climits>
+#include <fstream>
+#include <utility>
+
 
 using namespace synth;
 

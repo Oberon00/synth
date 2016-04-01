@@ -1,13 +1,16 @@
 #include "MultiTuProcessor.hpp"
+
+#include "CgStr.hpp"
 #include "SimpleTemplate.hpp"
-#include <algorithm>
+#include "xref.hpp"
+
 #include <boost/filesystem.hpp>
 #include <boost/variant/variant.hpp>
-#include "CgStr.hpp"
+
+#include <algorithm>
 #include <climits>
 #include <fstream>
 #include <iostream>
-#include "xref.hpp"
 
 using namespace synth;
 

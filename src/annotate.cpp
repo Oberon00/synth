@@ -1,11 +1,12 @@
-#include "CgStr.hpp"
-#include "output.hpp"
-#include "MultiTuProcessor.hpp"
 #include "annotate.hpp"
+
+#include "CgStr.hpp"
+#include "MultiTuProcessor.hpp"
 #include "cgWrappers.hpp"
 #include "config.hpp"
-#include "xref.hpp"
 #include "debug.hpp"
+#include "output.hpp"
+#include "xref.hpp"
 
 #include <climits>
 #include <cstring>

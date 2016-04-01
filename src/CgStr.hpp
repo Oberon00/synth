@@ -1,7 +1,8 @@
 #ifndef SYNTH_LIBCLANG_HPP_INCLUDED
 #define SYNTH_LIBCLANG_HPP_INCLUDED
 
-#include "clang-c/CXString.h"
+#include <clang-c/CXString.h>
+
 #include <cassert>
 #include <ostream>
 #include <string>

@@ -1,8 +1,10 @@
-#include "simpletemplate.hpp"
-#include <ostream>
-#include <cassert>
-#include <boost/variant/variant.hpp>
+#include "SimpleTemplate.hpp"
+
 #include <boost/variant/apply_visitor.hpp>
+#include <boost/variant/variant.hpp>
+
+#include <cassert>
+#include <ostream>
 
 using namespace synth;
 

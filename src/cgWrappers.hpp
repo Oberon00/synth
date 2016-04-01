@@ -1,12 +1,14 @@
 #ifndef SYNTH_CGWRAPPERS_HPP_INCLUDED
 #define SYNTH_CGWRAPPERS_HPP_INCLUDED
 
-#include <clang-c/Index.h>
 #include <clang-c/CXCompilationDatabase.h>
+#include <clang-c/Index.h>
+
 #include <boost/noncopyable.hpp>
+
 #include <memory>
-#include <vector>
 #include <type_traits> // remove_pointer_t
+#include <vector>
 
 namespace synth {
 

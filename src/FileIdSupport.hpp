@@ -23,7 +23,7 @@ namespace std {
             seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
         }
     };
-    
+
     template <>
     struct equal_to<CXFileUniqueID> {
         bool operator() (CXFileUniqueID const& lhs, CXFileUniqueID const& rhs) const {

@@ -1,19 +1,17 @@
 #ifndef SYNTH_MULTI_TU_PROCESSOR_HPP_INCLUDED
 #define SYNTH_MULTI_TU_PROCESSOR_HPP_INCLUDED
 
-#include <string>
-#include <vector>
-#include <unordered_set>
-#include <cassert>
-#include <clang-c/Index.h>
-#include <unordered_map>
-#include <unordered_set>
-#include <boost/optional.hpp>
-#include <boost/filesystem/path.hpp>
+#include "fileidsupport.hpp"
 #include "output.hpp"
-#include "FileIdSupport.hpp"
-#include <mutex>
+
+#include <boost/filesystem/path.hpp>
+#include <clang-c/Index.h>
+
 #include <atomic>
+#include <mutex>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace synth {
 

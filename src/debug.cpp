@@ -1,4 +1,5 @@
 #include "debug.hpp"
+
 #include "CgStr.hpp"
 #include <iostream>
 

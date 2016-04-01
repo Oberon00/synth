@@ -1,7 +1,7 @@
 #include "cmdline.hpp"
 
-#include <stdexcept>
 #include <cstring>
+#include <stdexcept>
 #include <thread>
 
 using namespace synth;

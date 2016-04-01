@@ -1,12 +1,13 @@
 #ifndef SYNTH_SIMPLETEMPLATE_HPP_INCLUDED
 #define SYNTH_SIMPLETEMPLATE_HPP_INCLUDED
 
-#include <string>
-#include <vector>
-#include <iosfwd>
-#include <unordered_map>
 #include <boost/variant/variant_fwd.hpp>
+
 #include <functional>
+#include <iosfwd>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace synth {
 
