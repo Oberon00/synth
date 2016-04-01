@@ -21,6 +21,7 @@ namespace {
 struct FileState {
     HighlightedFile& hlFile;
     MultiTuProcessor& multiTuProcessor;
+    bool prevWasDtorStart;
 };
 
 } // anonymous namespace
@@ -253,59 +254,66 @@ static TokenAttributes getTokenAttributes(
     }
 }
 
+static unsigned getLocOffset(CXSourceLocation loc)
+{
+    unsigned r;
+    clang_getFileLocation(loc, nullptr, nullptr, nullptr, &r);
+    return r;
+}
+
 static void processToken(FileState& state, CXToken tok, CXCursor cur)
 {
     auto& markups = state.hlFile.markups;
     markups.emplace_back();
-    Markup& m = markups.back();
+    Markup* m = &markups.back();
     CXTranslationUnit tu = clang_Cursor_getTranslationUnit(cur);
     CXSourceRange rng = clang_getTokenExtent(tu, tok);
     unsigned lineno;
     clang_getFileLocation(
-        clang_getRangeStart(rng), nullptr, &lineno, nullptr, &m.beginOffset);
-    clang_getFileLocation(
-        clang_getRangeEnd(rng), nullptr, nullptr, nullptr, &m.endOffset);
-    if (m.beginOffset == m.endOffset) {
+        clang_getRangeStart(rng), nullptr, &lineno, nullptr, &m->beginOffset);
+    m->endOffset = getLocOffset(clang_getRangeEnd(rng));
+    if (m->beginOffset == m->endOffset) {
         markups.pop_back();
         return;
     }
 
-    m.refd.file = nullptr;
-    m.attrs = getTokenAttributes(tok, cur, tu);
+    m->refd.file = nullptr;
+    m->attrs = getTokenAttributes(tok, cur, tu);
 
     CXTokenKind tk = clang_getTokenKind(tok);
     if (tk == CXToken_Comment || tk == CXToken_Literal)
         return;
 
-    if (!clang_equalLocations(
+    CXCursorKind k = clang_getCursorKind(cur);
+    if (state.prevWasDtorStart) {
+        assert (k == CXCursor_Destructor);
+        assert(tk == CXToken_Identifier);
+        state.prevWasDtorStart = false;
+        Markup dtorLnk = {};
+        dtorLnk.beginOffset = getLocOffset(clang_getCursorLocation(cur));
+        dtorLnk.endOffset = m->endOffset;
+        markups.push_back(std::move(dtorLnk));
+        m = &markups.back();
+    } else if (!clang_equalLocations(
             clang_getRangeStart(rng), clang_getCursorLocation(cur))
     ) {
         return;
-    }
-
-    CXCursorKind k = clang_getCursorKind(cur);
-    if (k == CXCursor_InclusionDirective) {
+    } else if (k == CXCursor_InclusionDirective) {
         Markup incLnk = {};
         CXSourceRange incrng = clang_getCursorExtent(cur);
-        clang_getFileLocation(
-            clang_getRangeStart(incrng),
-            nullptr,
-            nullptr,
-            nullptr,
-            &incLnk.beginOffset);
-        clang_getFileLocation(
-            clang_getRangeEnd(incrng),
-            nullptr,
-            nullptr,
-            nullptr,
-            &incLnk.endOffset);
+        incLnk.beginOffset = getLocOffset(clang_getRangeStart(incrng));
+        incLnk.endOffset = getLocOffset(clang_getRangeEnd(incrng));
         if (linkInclude(incLnk, cur, state.multiTuProcessor))
             state.hlFile.markups.push_back(std::move(incLnk));
+        return;
+    } else if (k == CXCursor_Destructor) {
+        assert(tk == CXToken_Punctuation); // "~"
+        state.prevWasDtorStart = true;
         return;
     }
 
     if (clang_isDeclaration(k))
-        m.attrs |= TokenAttributes::flagDecl;
+        m->attrs |= TokenAttributes::flagDecl;
 
     // clang_isReference() sometimes reports false negatives, e.g. for
     // overloaded operators, so check manually.
@@ -313,11 +321,11 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
     bool isref = !clang_Cursor_isNull(referenced)
         && !clang_equalCursors(cur, referenced);
     if (isref)
-        linkCursorIfIncludedDst(m, referenced, lineno, state.multiTuProcessor);
+        linkCursorIfIncludedDst(*m, referenced, lineno, state.multiTuProcessor);
 
     CXCursor defcur = clang_getCursorDefinition(cur);
     if (clang_equalCursors(defcur, cur)) { // This is a definition:
-        m.attrs |= TokenAttributes::flagDef;
+        m->attrs |= TokenAttributes::flagDef;
         CgStr usr(clang_getCursorUSR(cur));
         if (!usr.empty()) {
             SourceLocation decl {&state.hlFile, lineno};
@@ -333,7 +341,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
                     usr.get());
             }
         } else {
-            linkCursorIfIncludedDst(m, defcur, lineno, state.multiTuProcessor);
+            linkCursorIfIncludedDst(*m, defcur, lineno, state.multiTuProcessor);
         }
     }
 }
@@ -367,7 +375,7 @@ static void processFile(
     CgTokensCleanup tokCleanup(tokens, numTokens, tu);
 
     if (numTokens > 0) {
-        FileState state {*hlFile, multiTuProcessor};
+        FileState state {*hlFile, multiTuProcessor, false};
         std::vector<CXCursor> tokCurs(numTokens);
         clang_annotateTokens(tu, tokens, numTokens, tokCurs.data());
         for (unsigned i = 0; i < numTokens - 1; ++i) {
