@@ -389,6 +389,7 @@ static void processFile(
             processToken(state, tokens[i], cur);
         }
     }
+    hlFile->markups.shrink_to_fit();
 }
 
 int synth::processTu(
