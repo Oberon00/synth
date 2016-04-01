@@ -8,13 +8,12 @@ using namespace synth;
 
 void synth::linkSymbol(Markup& m, SourceLocation const& sym)
 {
-    if (!sym.valid())
-        return;
-    m.refd = sym;
+    if (sym.valid())
+        m.refd = sym;
 }
 
 void synth::linkCursorIfIncludedDst(
-    Markup& m, CXCursor dst, unsigned srcLineno, MultiTuProcessor& state)
+    Markup& m, CXCursor dst, MultiTuProcessor& state)
 {
     CXFile file;
     unsigned lineno;

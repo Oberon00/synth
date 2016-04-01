@@ -10,11 +10,8 @@ struct Markup;
 struct SourceLocation;
 class MultiTuProcessor;
 
-void linkCursorIfIncludedDst(
-    Markup& m, CXCursor dst, unsigned srcLineno, MultiTuProcessor& state);
-
+void linkCursorIfIncludedDst(Markup& m, CXCursor dst, MultiTuProcessor& state);
 void linkSymbol(Markup& m, SourceLocation const& sym);
-
 bool linkInclude(Markup& m, CXCursor incCursor, MultiTuProcessor& state);
 
 } // namespace synth

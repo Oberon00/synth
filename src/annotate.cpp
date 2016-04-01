@@ -321,7 +321,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
     bool isref = !clang_Cursor_isNull(referenced)
         && !clang_equalCursors(cur, referenced);
     if (isref)
-        linkCursorIfIncludedDst(*m, referenced, lineno, state.multiTuProcessor);
+        linkCursorIfIncludedDst(*m, referenced, state.multiTuProcessor);
 
     CXCursor defcur = clang_getCursorDefinition(cur);
     if (clang_equalCursors(defcur, cur)) { // This is a definition:
@@ -341,7 +341,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
                     usr.get());
             }
         } else {
-            linkCursorIfIncludedDst(*m, defcur, lineno, state.multiTuProcessor);
+            linkCursorIfIncludedDst(*m, defcur, state.multiTuProcessor);
         }
     }
 }
