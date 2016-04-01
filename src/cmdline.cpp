@@ -66,6 +66,8 @@ CmdLineArgs CmdLineArgs::parse(int argc, char const* const* argv)
             foundCmd = true;
             ++i;
             break;
+        } else {
+            throw std::runtime_error(std::string("Bad argument ") + argv[i]);
         }
     }
 
