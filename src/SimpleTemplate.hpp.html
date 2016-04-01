@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>src/SimpleTemplate.hpp</title>
+        <link rel="stylesheet" href="../codestyle-colorful.css">
+    </head>
+    <body>
+        <div class="highlight"><pre><span id="1L" class="Ln"><span class="cp">#</span><span class="cp">ifndef</span> <span class="cp">SYNTH_SIMPLETEMPLATE_HPP_INCLUDED</span></span>
+<span id="2L" class="Ln"><span class="cp">#</span><span class="cp">define</span> <span class="cp">SYNTH_SIMPLETEMPLATE_HPP_INCLUDED</span></span>
+<span id="3L" class="Ln"></span>
+<span id="4L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">boost</span><span class="cpf">/</span><span class="cpf">utility</span><span class="cpf">/</span><span class="cpf">string_ref</span><span class="cpf">.</span><span class="cpf">hpp</span><span class="cpf">></span> </span>
+<span id="5L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">boost</span><span class="cpf">/</span><span class="cpf">variant</span><span class="cpf">/</span><span class="cpf">variant_fwd</span><span class="cpf">.</span><span class="cpf">hpp</span><span class="cpf">></span></span>
+<span id="6L" class="Ln"></span>
+<span id="7L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">functional</span><span class="cpf">></span></span>
+<span id="8L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">iosfwd</span><span class="cpf">></span></span>
+<span id="9L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">string</span><span class="cpf">></span></span>
+<span id="10L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">unordered_map</span><span class="cpf">></span></span>
+<span id="11L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">vector</span><span class="cpf">></span></span>
+<span id="12L" class="Ln"></span>
+<span id="13L" class="Ln"><span class="kd">namespace</span> <span class="def decl nn" id="synth">synth</span> <span class="p">{</span></span>
+<span id="14L" class="Ln"></span>
+<span id="15L" class="Ln"><span class="kd">class</span> <span class="def decl nc" id="synth::SimpleTemplate">SimpleTemplate</span> <span class="p">{</span></span>
+<span id="16L" class="Ln"><span class="kd">public</span><span class="p">:</span></span>
+<span id="17L" class="Ln">    <span class="kd">explicit</span> <a href="SimpleTemplate.cpp.html#synth::SimpleTemplate::SimpleTemplate:boost::string_ref" class="decl nf" id="synth::SimpleTemplate::SimpleTemplate:boost::string_ref">SimpleTemplate</a><span class="p">(</span><span class="nn">boost</span><span class="p">::</span><span class="nc">string_ref</span> <span class="def decl nv">text</span><span class="p">)</span><span class="p">;</span></span>
+<span id="18L" class="Ln"></span>
+<span id="19L" class="Ln">    <span class="kd">using</span> <span class="def decl nc" id="synth::SimpleTemplate::ValCallback">ValCallback</span> <span class="p">=</span> <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/utility/functional/function" class="nc">function</a><span class="p">&lt;</span><span class="kt">void</span><span class="p">(</span><a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/io/basic_ostream" class="nc">ostream</a><span class="p">&amp;</span><span class="def decl p">)</span><span class="p">></span><span class="p">;</span></span>
+<span id="20L" class="Ln">    <span class="kd">using</span> <span class="def decl nc" id="synth::SimpleTemplate::Val">Val</span> <span class="p">=</span> <span class="nn">boost</span><span class="p">::</span><span class="nc">variant</span><span class="p">&lt;</span><a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/string/basic_string" class="nc">string</a><span class="p">,</span> <a href="#synth::SimpleTemplate::ValCallback" class="nc">ValCallback</a><span class="p">></span><span class="p">;</span></span>
+<span id="21L" class="Ln">    <span class="kd">using</span> <span class="def decl nc" id="synth::SimpleTemplate::Context">Context</span> <span class="p">=</span> <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/container/unordered_map" class="nc">unordered_map</a><span class="p">&lt;</span><a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/string/basic_string" class="nc">string</a><span class="p">,</span> <a href="#synth::SimpleTemplate::Val" class="nc">Val</a><span class="p">></span><span class="p">;</span></span>
+<span id="22L" class="Ln"></span>
+<span id="23L" class="Ln">    <span class="kt">void</span> <a href="SimpleTemplate.cpp.html#synth::SimpleTemplate::writeTo:std::ostream&amp;,const-SimpleTemplate::Context&amp;" class="decl nf" id="synth::SimpleTemplate::writeTo:std::ostream&amp;,const-Context&amp;">writeTo</a><span class="p">(</span><a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/io/basic_ostream" class="nc">ostream</a><span class="p">&amp;</span> <span class="def decl nv">out</span><span class="p">,</span> <a href="#synth::SimpleTemplate::Context" class="nc">Context</a> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">ctx</span><span class="p">)</span> <span class="kd">const</span><span class="p">;</span></span>
+<span id="24L" class="Ln"></span>
+<span id="25L" class="Ln"></span>
+<span id="26L" class="Ln"><span class="kd">private</span><span class="p">:</span></span>
+<span id="27L" class="Ln">    <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/container/vector" class="nc">vector</a><span class="p">&lt;</span><a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/string/basic_string" class="nc">string</a><span class="p">></span> <span class="def decl vi" id="synth::SimpleTemplate::m_literals">m_literals</span><span class="p">;</span></span>
+<span id="28L" class="Ln">    <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/container/vector" class="nc">vector</a><span class="p">&lt;</span><a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/string/basic_string" class="nc">string</a><span class="p">></span> <span class="def decl vi" id="synth::SimpleTemplate::m_insertionKeys">m_insertionKeys</span><span class="p">;</span></span>
+<span id="29L" class="Ln"><span class="p">}</span><span class="p">;</span></span>
+<span id="30L" class="Ln"></span>
+<span id="31L" class="Ln"><span class="p">}</span> <span class="c">// namespace synth</span></span>
+<span id="32L" class="Ln"></span>
+<span id="33L" class="Ln"><span class="cp">#</span><span class="cp">endif</span> <span class="cp">// SYNTH_SIMPLETEMPLATE_HPP_INCLUDED</span></span>
+<span id="34L" class="Ln"></span>
+</pre></div>
+        <script src="../code.js"></script>
+    </body>
+</html>

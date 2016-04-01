@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>include/clang-c/CXString.h</title>
+        <link rel="stylesheet" href="../../../codestyle-colorful.css">
+    </head>
+    <body>
+        <div class="highlight"><pre><span id="1L" class="Ln"><span class="c">/*===-- clang-c/CXString.h - C Index strings  --------------------*- C -*-===*\</span></span>
+<span id="2L" class="Ln"><span class="c">|*                                                                            *|</span></span>
+<span id="3L" class="Ln"><span class="c">|*                     The LLVM Compiler Infrastructure                       *|</span></span>
+<span id="4L" class="Ln"><span class="c">|*                                                                            *|</span></span>
+<span id="5L" class="Ln"><span class="c">|* This file is distributed under the University of Illinois Open Source      *|</span></span>
+<span id="6L" class="Ln"><span class="c">|* License. See LICENSE.TXT for details.                                      *|</span></span>
+<span id="7L" class="Ln"><span class="c">|*                                                                            *|</span></span>
+<span id="8L" class="Ln"><span class="c">|*===----------------------------------------------------------------------===*|</span></span>
+<span id="9L" class="Ln"><span class="c">|*                                                                            *|</span></span>
+<span id="10L" class="Ln"><span class="c">|* This header provides the interface to C Index strings.                     *|</span></span>
+<span id="11L" class="Ln"><span class="c">|*                                                                            *|</span></span>
+<span id="12L" class="Ln"><span class="c">\*===----------------------------------------------------------------------===*/</span></span>
+<span id="13L" class="Ln"></span>
+<span id="14L" class="Ln"><span class="cp">#</span><span class="cp">ifndef</span> <span class="cp">LLVM_CLANG_C_CXSTRING_H</span></span>
+<span id="15L" class="Ln"><span class="cp">#</span><span class="cp">define</span> <span class="cp">LLVM_CLANG_C_CXSTRING_H</span></span>
+<span id="16L" class="Ln"></span>
+<span id="17L" class="Ln"><a href="Platform.h.html"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">"clang-c/Platform.h"</span></a></span>
+<span id="18L" class="Ln"></span>
+<span id="19L" class="Ln"><span class="cp">#</span><span class="cp">ifdef</span> <span class="cp">__cplusplus</span></span>
+<span id="20L" class="Ln"><span class="kd">extern</span> <span class="l">"C"</span> <span class="p">{</span></span>
+<span id="21L" class="Ln"><span class="cp">#</span><span class="cp">endif</span></span>
+<span id="22L" class="Ln"></span>
+<span id="23L" class="Ln"><span class="c">/**</span></span>
+<span id="24L" class="Ln"><span class="c"> * \defgroup CINDEX_STRING String manipulation routines</span></span>
+<span id="25L" class="Ln"><span class="c"> * \ingroup CINDEX</span></span>
+<span id="26L" class="Ln"><span class="c"> *</span></span>
+<span id="27L" class="Ln"><span class="c"> * @{</span></span>
+<span id="28L" class="Ln"><span class="c"> */</span></span>
+<span id="29L" class="Ln"></span>
+<span id="30L" class="Ln"><span class="c">/**</span></span>
+<span id="31L" class="Ln"><span class="c"> * \brief A character string.</span></span>
+<span id="32L" class="Ln"><span class="c"> *</span></span>
+<span id="33L" class="Ln"><span class="c"> * The \c CXString type is used to return strings from the interface when</span></span>
+<span id="34L" class="Ln"><span class="c"> * the ownership of that string might differ from one call to the next.</span></span>
+<span id="35L" class="Ln"><span class="c"> * Use \c clang_getCString() to retrieve the string data and, once finished</span></span>
+<span id="36L" class="Ln"><span class="c"> * with the string data, call \c clang_disposeString() to free the string.</span></span>
+<span id="37L" class="Ln"><span class="c"> */</span></span>
+<span id="38L" class="Ln"><span class="kd">typedef</span> <span class="kd">struct</span> <span class="p">{</span></span>
+<span id="39L" class="Ln">  <span class="kd">const</span> <span class="kt">void</span> <span class="p">*</span><span class="def decl vi" id="CXString::data">data</span><span class="p">;</span></span>
+<span id="40L" class="Ln">  <span class="kt">unsigned</span> <span class="def decl vi" id="CXString::private_flags">private_flags</span><span class="p">;</span></span>
+<span id="41L" class="Ln"><span class="p">}</span> <a href="#38L" class="def decl nc">CXString</a><span class="p">;</span></span>
+<span id="42L" class="Ln"></span>
+<span id="43L" class="Ln"><span class="kd">typedef</span> <span class="kd">struct</span> <span class="p">{</span></span>
+<span id="44L" class="Ln">  <a href="#38L" class="nc">CXString</a> <span class="p">*</span><span class="def decl vi" id="CXStringSet::Strings">Strings</span><span class="p">;</span></span>
+<span id="45L" class="Ln">  <span class="kt">unsigned</span> <span class="def decl vi" id="CXStringSet::Count">Count</span><span class="p">;</span></span>
+<span id="46L" class="Ln"><span class="p">}</span> <a href="#43L" class="def decl nc">CXStringSet</a><span class="p">;</span></span>
+<span id="47L" class="Ln"></span>
+<span id="48L" class="Ln"><span class="c">/**</span></span>
+<span id="49L" class="Ln"><span class="c"> * \brief Retrieve the character data associated with the given string.</span></span>
+<span id="50L" class="Ln"><span class="c"> */</span></span>
+<span id="51L" class="Ln"><a href="Platform.h.html#29L" class="cp">CINDEX_LINKAGE</a> <span class="kd">const</span> <span class="kt">char</span> <span class="p">*</span><span class="decl nf" id="clang_getCString:CXString">clang_getCString</span><span class="p">(</span><a href="#38L" class="nc">CXString</a> <span class="def decl nv">string</span><span class="p">)</span><span class="p">;</span></span>
+<span id="52L" class="Ln"></span>
+<span id="53L" class="Ln"><span class="c">/**</span></span>
+<span id="54L" class="Ln"><span class="c"> * \brief Free the given string.</span></span>
+<span id="55L" class="Ln"><span class="c"> */</span></span>
+<span id="56L" class="Ln"><a href="Platform.h.html#29L" class="cp">CINDEX_LINKAGE</a> <span class="kt">void</span> <span class="decl nf" id="clang_disposeString:CXString">clang_disposeString</span><span class="p">(</span><a href="#38L" class="nc">CXString</a> <span class="def decl nv">string</span><span class="p">)</span><span class="p">;</span></span>
+<span id="57L" class="Ln"></span>
+<span id="58L" class="Ln"><span class="c">/**</span></span>
+<span id="59L" class="Ln"><span class="c"> * \brief Free the given string set.</span></span>
+<span id="60L" class="Ln"><span class="c"> */</span></span>
+<span id="61L" class="Ln"><a href="Platform.h.html#29L" class="cp">CINDEX_LINKAGE</a> <span class="kt">void</span> <span class="decl nf" id="clang_disposeStringSet:CXStringSet*">clang_disposeStringSet</span><span class="p">(</span><a href="#43L" class="nc">CXStringSet</a> <span class="p">*</span><span class="def decl nv">set</span><span class="p">)</span><span class="p">;</span></span>
+<span id="62L" class="Ln"></span>
+<span id="63L" class="Ln"><span class="c">/**</span></span>
+<span id="64L" class="Ln"><span class="c"> * @}</span></span>
+<span id="65L" class="Ln"><span class="c"> */</span></span>
+<span id="66L" class="Ln"></span>
+<span id="67L" class="Ln"><span class="cp">#</span><span class="cp">ifdef</span> <span class="cp">__cplusplus</span></span>
+<span id="68L" class="Ln"><span class="p">}</span></span>
+<span id="69L" class="Ln"><span class="cp">#</span><span class="cp">endif</span></span>
+<span id="70L" class="Ln"><span class="cp">#</span><span class="cp">endif</span></span>
+<span id="71L" class="Ln"></span>
+<span id="72L" class="Ln"></span>
+</pre></div>
+        <script src="../../../code.js"></script>
+    </body>
+</html>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>src/xref.hpp</title>
+        <link rel="stylesheet" href="../codestyle-colorful.css">
+    </head>
+    <body>
+        <div class="highlight"><pre><span id="1L" class="Ln"><span class="cp">#</span><span class="cp">ifndef</span> <span class="cp">SYNTH_XREF_HPP_INCLUDED</span></span>
+<span id="2L" class="Ln"><span class="cp">#</span><span class="cp">define</span> <span class="cp">SYNTH_XREF_HPP_INCLUDED</span></span>
+<span id="3L" class="Ln"></span>
+<span id="4L" class="Ln"><a href="../lib-llvm/include/clang-c/Index.h.html"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">clang</span><span class="cpf">-</span><span class="cpf">c</span><span class="cpf">/</span><span class="cpf">Index</span><span class="cpf">.</span><span class="cpf">h</span><span class="cpf">></span></a></span>
+<span id="5L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">string</span><span class="cpf">></span></span>
+<span id="6L" class="Ln"></span>
+<span id="7L" class="Ln"><span class="kd">namespace</span> <span class="def decl nn" id="synth">synth</span> <span class="p">{</span></span>
+<span id="8L" class="Ln"></span>
+<span id="9L" class="Ln"><span class="kd">struct</span> <a href="output.hpp.html#synth::Markup" class="decl nc">Markup</a><span class="p">;</span></span>
+<span id="10L" class="Ln"><span class="kd">class</span> <a href="MultiTuProcessor.hpp.html#synth::MultiTuProcessor" class="decl nc">MultiTuProcessor</a><span class="p">;</span></span>
+<span id="11L" class="Ln"></span>
+<span id="12L" class="Ln"><span class="kt">void</span> <a href="xref.cpp.html#synth::linkCursor:synth::Markup&amp;,CXCursor,synth::MultiTuProcessor&amp;" class="decl nf" id="synth::linkCursor:synth::Markup&amp;,CXCursor,synth::MultiTuProcessor&amp;">linkCursor</a><span class="p">(</span><a href="output.hpp.html#synth::Markup" class="nc">Markup</a><span class="p">&amp;</span> <span class="def decl nv">m</span><span class="p">,</span> <a href="../lib-llvm/include/clang-c/Index.h.html#2385L" class="nc">CXCursor</a> <span class="def decl nv">mcur</span><span class="p">,</span> <a href="output.hpp.html#synth::MultiTuProcessor" class="nc">MultiTuProcessor</a><span class="p">&amp;</span> <span class="def decl nv">state</span><span class="p">)</span><span class="p">;</span></span>
+<span id="13L" class="Ln"><a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/string/basic_string" class="nc">string</a> <a href="xref.cpp.html#synth::fileUniqueName:CXCursor,bool" class="decl nf" id="synth::fileUniqueName:CXCursor,bool">fileUniqueName</a><span class="p">(</span><a href="../lib-llvm/include/clang-c/Index.h.html#2385L" class="nc">CXCursor</a> <span class="def decl nv">cur</span><span class="p">,</span> <span class="kt">bool</span> <span class="def decl nv">isC</span><span class="p">)</span><span class="p">;</span></span>
+<span id="14L" class="Ln"><a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/string/basic_string" class="nc">string</a> <a href="xref.cpp.html#synth::simpleQualifiedName:CXCursor" class="decl nf" id="synth::simpleQualifiedName:CXCursor">simpleQualifiedName</a><span class="p">(</span><a href="../lib-llvm/include/clang-c/Index.h.html#2385L" class="nc">CXCursor</a> <span class="def decl nv">cur</span><span class="p">)</span><span class="p">;</span></span>
+<span id="15L" class="Ln"></span>
+<span id="16L" class="Ln"><span class="kt">bool</span> <a href="xref.cpp.html#synth::isNamespaceLevelDeclaration:CXCursor" class="decl nf" id="synth::isNamespaceLevelDeclaration:CXCursor">isNamespaceLevelDeclaration</a><span class="p">(</span><a href="../lib-llvm/include/clang-c/Index.h.html#2385L" class="nc">CXCursor</a> <span class="def decl nv">cur</span><span class="p">)</span><span class="p">;</span></span>
+<span id="17L" class="Ln"></span>
+<span id="18L" class="Ln"><span class="p">}</span> <span class="c">// namespace synth</span></span>
+<span id="19L" class="Ln"></span>
+<span id="20L" class="Ln"><span class="cp">#</span><span class="cp">endif</span> <span class="cp">// SYNTH_XREF_HPP_INCLUDED</span></span>
+<span id="21L" class="Ln"></span>
+</pre></div>
+        <script src="../code.js"></script>
+    </body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>src/MultiTuProcessor.hpp</title>
+        <link rel="stylesheet" href="../codestyle-colorful.css">
+    </head>
+    <body>
+        <div class="highlight"><pre><span id="1L" class="Ln"><span class="cp">#</span><span class="cp">ifndef</span> <span class="cp">SYNTH_MULTI_TU_PROCESSOR_HPP_INCLUDED</span></span>
+<span id="2L" class="Ln"><span class="cp">#</span><span class="cp">define</span> <span class="cp">SYNTH_MULTI_TU_PROCESSOR_HPP_INCLUDED</span></span>
+<span id="3L" class="Ln"></span>
+<span id="4L" class="Ln"><a href="FileIdSupport.hpp.html"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">"FileIdSupport.hpp"</span></a></span>
+<span id="5L" class="Ln"><a href="output.hpp.html"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">"output.hpp"</span></a></span>
+<span id="6L" class="Ln"></span>
+<span id="7L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">boost</span><span class="cpf">/</span><span class="cpf">filesystem</span><span class="cpf">/</span><span class="cpf">path</span><span class="cpf">.</span><span class="cpf">hpp</span><span class="cpf">></span></span>
+<span id="8L" class="Ln"><a href="../lib-llvm/include/clang-c/Index.h.html"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">clang</span><span class="cpf">-</span><span class="cpf">c</span><span class="cpf">/</span><span class="cpf">Index</span><span class="cpf">.</span><span class="cpf">h</span><span class="cpf">></span></a></span>
+<span id="9L" class="Ln"></span>
+<span id="10L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">atomic</span><span class="cpf">></span></span>
+<span id="11L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">mutex</span><span class="cpf">></span></span>
+<span id="12L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">string</span><span class="cpf">></span></span>
+<span id="13L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">unordered_map</span><span class="cpf">></span></span>
+<span id="14L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">unordered_set</span><span class="cpf">></span></span>
+<span id="15L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">vector</span><span class="cpf">></span></span>
+<span id="16L" class="Ln"></span>
+<span id="17L" class="Ln"><span class="kd">namespace</span> <span class="def decl nn" id="synth">synth</span> <span class="p">{</span></span>
+<span id="18L" class="Ln"></span>
+<span id="19L" class="Ln"><span class="kd">class</span> <a href="SimpleTemplate.hpp.html#synth::SimpleTemplate" class="decl nc" id="synth::SimpleTemplate">SimpleTemplate</a><span class="p">;</span></span>
+<span id="20L" class="Ln"></span>
+<span id="21L" class="Ln"><span class="kd">namespace</span> <span class="decl nn">fs</span> <span class="p">=</span> <span class="nn">boost</span><span class="p">::</span><span class="nn">filesystem</span><span class="p">;</span></span>
+<span id="22L" class="Ln"></span>
+<span id="23L" class="Ln"><span class="kd">struct</span> <span class="def decl nc" id="synth::FileEntry">FileEntry</span> <span class="p">{</span></span>
+<span id="24L" class="Ln">    <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/atomic/atomic_flag" class="nc">atomic_flag</a> <span class="def decl vi" id="synth::FileEntry::processed">processed</span><span class="p">;</span></span>
+<span id="25L" class="Ln">    <a href="output.hpp.html#synth::HighlightedFile" class="nc">HighlightedFile</a> <span class="def decl vi" id="synth::FileEntry::hlFile">hlFile</span><span class="p">;</span></span>
+<span id="26L" class="Ln"><span class="p">}</span><span class="p">;</span></span>
+<span id="27L" class="Ln"></span>
+<span id="28L" class="Ln"><span class="kd">using</span> <span class="def decl nc" id="synth::PathMap">PathMap</span> <span class="p">=</span> <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/container/vector" class="nc">vector</a><span class="p">&lt;</span><a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/utility/pair" class="nc">pair</a><span class="p">&lt;</span><a href="#21L" class="nn">fs</a><span class="p">::</span><span class="nc">path</span><span class="p">,</span> <a href="#21L" class="nn">fs</a><span class="p">::</span><span class="nc">path</span><span class="p">>></span><span class="p">;</span></span>
+<span id="29L" class="Ln"></span>
+<span id="30L" class="Ln"><span class="c">// Trys to link m to an external URL that represents what refcur references.</span></span>
+<span id="31L" class="Ln"><span class="c">// The callee must be thread safe.</span></span>
+<span id="32L" class="Ln"><span class="kd">using</span> <span class="def decl nc" id="synth::ExternalRefLinker">ExternalRefLinker</span> <span class="p">=</span> <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/utility/functional/function" class="nc">function</a><span class="p">&lt;</span><span class="kt">void</span><span class="p">(</span><a href="output.hpp.html#synth::Markup" class="nc">Markup</a><span class="p">&amp;</span> <span class="def decl nv">m</span><span class="p">,</span> <a href="../lib-llvm/include/clang-c/Index.h.html#2385L" class="nc">CXCursor</a> <span class="def decl nv">mcur</span><span class="p">)</span><span class="p">></span><span class="p">;</span></span>
+<span id="33L" class="Ln"></span>
+<span id="34L" class="Ln"><span class="kd">class</span> <span class="def decl nc" id="synth::MultiTuProcessor">MultiTuProcessor</span> <span class="p">{</span></span>
+<span id="35L" class="Ln">    <span class="kd">struct</span> <span class="def decl nc" id="synth::MultiTuProcessor::SymbolId">SymbolId</span> <span class="p">{</span></span>
+<span id="36L" class="Ln">        <a href="output.hpp.html#synth::HighlightedFile" class="nc">HighlightedFile</a> <span class="kd">const</span><span class="p">*</span> <span class="def decl vi" id="synth::MultiTuProcessor::SymbolId::file">file</span><span class="p">;</span></span>
+<span id="37L" class="Ln">        <span class="kt">unsigned</span> <span class="def decl vi" id="synth::MultiTuProcessor::SymbolId::offset">offset</span><span class="p">;</span> <span class="c">// UINT_MAX: Whole file.</span></span>
+<span id="38L" class="Ln"></span>
+<span id="39L" class="Ln">        <span class="kt">bool</span> <span class="def decl " id="synth::MultiTuProcessor::SymbolId::operator==:const-synth::MultiTuProcessor::SymbolId&amp;"><span class="kd">operator</span><span class="p">==</span></span> <span class="p">(</span><a href="#synth::MultiTuProcessor::SymbolId" class="nc">SymbolId</a> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">other</span><span class="p">)</span> <span class="kd">const</span> <span class="p">{</span></span>
+<span id="40L" class="Ln">            <span class="k">return</span> <a href="#synth::MultiTuProcessor::SymbolId::offset" class="vi">offset</a> <span class="o">==</span> <a href="#39L" class="nv">other</a><span class="p">.</span><a href="#synth::MultiTuProcessor::SymbolId::offset" class="vi">offset</a> <span class="o">&amp;&amp;</span> <a href="#synth::MultiTuProcessor::SymbolId::file" class="vi">file</a> <span class="o">==</span> <a href="#39L" class="nv">other</a><span class="p">.</span><a href="#synth::MultiTuProcessor::SymbolId::file" class="vi">file</a><span class="p">;</span></span>
+<span id="41L" class="Ln">        <span class="p">}</span></span>
+<span id="42L" class="Ln">    <span class="p">}</span><span class="p">;</span></span>
+<span id="43L" class="Ln"></span>
+<span id="44L" class="Ln">    <span class="kd">struct</span> <span class="def decl nc" id="synth::MultiTuProcessor::SymbolIdHasher">SymbolIdHasher</span> <span class="p">{</span></span>
+<span id="45L" class="Ln">        <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/types/size_t" class="nc">size_t</a> <span class="def decl " id="synth::MultiTuProcessor::SymbolIdHasher::operator():const-synth::MultiTuProcessor::SymbolId&amp;"><span class="kd">operator</span><span class="p">(</span><span class="p">)</span></span> <span class="p">(</span><a href="#synth::MultiTuProcessor::SymbolId" class="nc">SymbolId</a> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">sym</span><span class="p">)</span> <span class="kd">const</span> <span class="p">{</span></span>
+<span id="46L" class="Ln">            <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/types/size_t" class="nc">size_t</a> <span class="def decl nv">h</span> <span class="p">=</span> <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/utility/hash" class="nc">hash</a><span class="p">&lt;</span><span class="k">decltype</span><span class="p">(</span><a href="#45L" class="nv">sym</a><span class="p">.</span><a href="#synth::MultiTuProcessor::SymbolId::file" class="vi">file</a><span class="p">)</span><span class="p">></span><span class="p">(</span><span class="p">)</span><span class="p">(</span><a href="#45L" class="nv">sym</a><span class="p">.</span><a href="#synth::MultiTuProcessor::SymbolId::file" class="vi">file</a><span class="p">)</span><span class="p">;</span></span>
+<span id="47L" class="Ln">            <span class="nn">boost</span><span class="p">::</span><span class="nf">hash_combine</span><span class="p">(</span><a href="#46L" class="nv">h</a><span class="p">,</span></span>
+<span id="48L" class="Ln">                <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/utility/hash" class="nc">hash</a><span class="p">&lt;</span><span class="k">decltype</span><span class="p">(</span><a href="#45L" class="nv">sym</a><span class="p">.</span><a href="#synth::MultiTuProcessor::SymbolId::offset" class="vi">offset</a><span class="p">)</span><span class="p">></span><span class="p">(</span><span class="p">)</span><span class="p">(</span><a href="#45L" class="nv">sym</a><span class="p">.</span><a href="#synth::MultiTuProcessor::SymbolId::offset" class="vi">offset</a><span class="p">)</span><span class="p">)</span><span class="p">;</span></span>
+<span id="49L" class="Ln">            <span class="k">return</span> <a href="#46L" class="nv">h</a><span class="p">;</span></span>
+<span id="50L" class="Ln">        <span class="p">}</span></span>
+<span id="51L" class="Ln">    <span class="p">}</span><span class="p">;</span></span>
+<span id="52L" class="Ln"></span>
+<span id="53L" class="Ln">    <span class="kd">using</span> <span class="def decl nc" id="synth::MultiTuProcessor::SymbolMap">SymbolMap</span> <span class="p">=</span> <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/container/unordered_map" class="nc">unordered_map</a><span class="p">&lt;</span><a href="#synth::MultiTuProcessor::SymbolId" class="nc">SymbolId</a><span class="p">,</span> <a href="output.hpp.html#synth::SymbolDeclaration" class="nc">SymbolDeclaration</a><span class="p">,</span> <a href="#synth::MultiTuProcessor::SymbolIdHasher" class="nc">SymbolIdHasher</a><span class="p">></span><span class="p">;</span></span>
+<span id="54L" class="Ln"><span class="kd">public</span><span class="p">:</span></span>
+<span id="55L" class="Ln">    <span class="kd">explicit</span> <a href="MultiTuProcessor.cpp.html#synth::MultiTuProcessor::MultiTuProcessor:const-PathMap&amp;,ExternalRefLinker&amp;&amp;" class="decl nf" id="synth::MultiTuProcessor::MultiTuProcessor:const-PathMap&amp;,ExternalRefLinker&amp;&amp;">MultiTuProcessor</a><span class="p">(</span></span>
+<span id="56L" class="Ln">        <a href="#synth::PathMap" class="nc">PathMap</a> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">rootdir_</span><span class="p">,</span> <a href="#synth::ExternalRefLinker" class="nc">ExternalRefLinker</a><span class="p">&amp;&amp;</span> <span class="def decl nv">refLinker</span><span class="p">)</span><span class="p">;</span></span>
+<span id="57L" class="Ln"></span>
+<span id="58L" class="Ln">    <span class="c">// Setter is not threadsafe!</span></span>
+<span id="59L" class="Ln">    <span class="kt">void</span> <span class="def decl nf" id="synth::MultiTuProcessor::setMaxIdSz:std::size_t">setMaxIdSz</span><span class="p">(</span><a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/types/size_t" class="nc">size_t</a> <span class="def decl nv">maxIdSz</span><span class="p">)</span> <span class="kd">noexcept</span> <span class="p">{</span> <a href="#synth::MultiTuProcessor::m_maxIdSz" class="vi">m_maxIdSz</a> <span class="o">=</span> <a href="#59L" class="nv">maxIdSz</a><span class="p">;</span> <span class="p">}</span></span>
+<span id="60L" class="Ln">    <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/types/size_t" class="nc">size_t</a> <span class="def decl nf" id="synth::MultiTuProcessor::maxIdSz">maxIdSz</span><span class="p">(</span><span class="p">)</span> <span class="kd">const</span> <span class="kd">noexcept</span> <span class="p">{</span> <span class="k">return</span> <a href="#synth::MultiTuProcessor::m_maxIdSz" class="vi">m_maxIdSz</a><span class="p">;</span> <span class="p">}</span></span>
+<span id="61L" class="Ln"></span>
+<span id="62L" class="Ln">    <span class="kt">bool</span> <a href="MultiTuProcessor.cpp.html#synth::MultiTuProcessor::isFileIncluded:const-fs::path&amp;" class="decl nf" id="synth::MultiTuProcessor::isFileIncluded:const-fs::path&amp;">isFileIncluded</a><span class="p">(</span><a href="#21L" class="nn">fs</a><span class="p">::</span><span class="nc">path</span> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">p</span><span class="p">)</span> <span class="kd">const</span><span class="p">;</span></span>
+<span id="63L" class="Ln"></span>
+<span id="64L" class="Ln">    <span class="c">// Returns nullptr if references to f should be ignored.</span></span>
+<span id="65L" class="Ln">    <span class="c">// Pass 0 for lineno and UINT_MAX for offset if referencing</span></span>
+<span id="66L" class="Ln">    <span class="c">// the file as a whole.</span></span>
+<span id="67L" class="Ln">    <a href="output.hpp.html#synth::SymbolDeclaration" class="nc">SymbolDeclaration</a> <span class="kd">const</span><span class="p">*</span> <a href="MultiTuProcessor.cpp.html#synth::MultiTuProcessor::referenceSymbol:CXFile,unsigned-int,unsigned-int" class="decl nf" id="synth::MultiTuProcessor::referenceSymbol:CXFile,unsigned-int,unsigned-int">referenceSymbol</a><span class="p">(</span></span>
+<span id="68L" class="Ln">        <a href="../lib-llvm/include/clang-c/Index.h.html#CXFile" class="nc">CXFile</a> <span class="def decl nv">f</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="def decl nv">lineno</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="def decl nv">offset</span><span class="p">)</span><span class="p">;</span></span>
+<span id="69L" class="Ln"></span>
+<span id="70L" class="Ln">    <a href="output.hpp.html#synth::SymbolDeclaration" class="nc">SymbolDeclaration</a><span class="p">&amp;</span> <a href="MultiTuProcessor.cpp.html#synth::MultiTuProcessor::createSymbol:const-synth::HighlightedFile&amp;,unsigned-int,unsigned-int" class="decl nf" id="synth::MultiTuProcessor::createSymbol:const-synth::HighlightedFile&amp;,unsigned-int,unsigned-int">createSymbol</a><span class="p">(</span></span>
+<span id="71L" class="Ln">        <a href="output.hpp.html#synth::HighlightedFile" class="nc">HighlightedFile</a> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">hlFile</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="def decl nv">lineno</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="def decl nv">offset</span><span class="p">)</span><span class="p">;</span></span>
+<span id="72L" class="Ln"></span>
+<span id="73L" class="Ln">    <a href="output.hpp.html#synth::HighlightedFile" class="nc">HighlightedFile</a><span class="p">*</span> <a href="MultiTuProcessor.cpp.html#synth::MultiTuProcessor::prepareToProcess:CXFile" class="decl nf" id="synth::MultiTuProcessor::prepareToProcess:CXFile">prepareToProcess</a><span class="p">(</span><a href="../lib-llvm/include/clang-c/Index.h.html#CXFile" class="nc">CXFile</a> <span class="def decl nv">f</span><span class="p">)</span><span class="p">;</span></span>
+<span id="74L" class="Ln"></span>
+<span id="75L" class="Ln">    <span class="kt">void</span> <a href="MultiTuProcessor.cpp.html#synth::MultiTuProcessor::registerDef:std::string&amp;&amp;,const-synth::SymbolDeclaration*" class="decl nf" id="synth::MultiTuProcessor::registerDef:std::string&amp;&amp;,const-synth::SymbolDeclaration*">registerDef</a><span class="p">(</span><a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/string/basic_string" class="nc">string</a><span class="p">&amp;&amp;</span> <span class="def decl nv">usr</span><span class="p">,</span> <a href="output.hpp.html#synth::SymbolDeclaration" class="nc">SymbolDeclaration</a> <span class="kd">const</span><span class="p">*</span> <span class="def decl nv">def</span><span class="p">)</span><span class="p">;</span></span>
+<span id="76L" class="Ln"></span>
+<span id="77L" class="Ln">    <span class="c">// Not threadsafe!</span></span>
+<span id="78L" class="Ln">    <span class="kt">void</span> <a href="MultiTuProcessor.cpp.html#synth::MultiTuProcessor::writeOutput:const-synth::SimpleTemplate&amp;" class="decl nf" id="synth::MultiTuProcessor::writeOutput:const-synth::SimpleTemplate&amp;">writeOutput</a><span class="p">(</span><a href="SimpleTemplate.hpp.html#synth::SimpleTemplate" class="nc">SimpleTemplate</a> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">tpl</span><span class="p">)</span><span class="p">;</span></span>
+<span id="79L" class="Ln"></span>
+<span id="80L" class="Ln">    <span class="c">// Not threadsafe!</span></span>
+<span id="81L" class="Ln">    <a href="output.hpp.html#synth::SymbolDeclaration" class="nc">SymbolDeclaration</a> <span class="kd">const</span><span class="p">*</span> <span class="def decl nf" id="synth::MultiTuProcessor::findMissingDef:const-std::string&amp;">findMissingDef</span><span class="p">(</span><a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/string/basic_string" class="nc">string</a> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">usr</span><span class="p">)</span></span>
+<span id="82L" class="Ln">    <span class="p">{</span></span>
+<span id="83L" class="Ln">        <span class="kd">auto</span> <span class="def decl nv">it</span> <span class="p">=</span> <a href="#synth::MultiTuProcessor::m_defs" class="vi">m_defs</a><span class="p">.</span><span class="nf">find</span><span class="p">(</span><a href="#81L" class="nv">usr</a><span class="p">)</span><span class="p">;</span></span>
+<span id="84L" class="Ln">        <span class="k">return</span> <a href="#83L" class="nv">it</a> <span class="p">==</span> <a href="#synth::MultiTuProcessor::m_defs" class="vi">m_defs</a><span class="p">.</span><span class="nf">end</span><span class="p">(</span><span class="p">)</span> <span class="p">?</span> <span class="kc">nullptr</span> <span class="p">:</span> <a href="#83L" class="nv">it</a><span class="p">-></span><span class="vi">second</span><span class="p">;</span></span>
+<span id="85L" class="Ln">    <span class="p">}</span></span>
+<span id="86L" class="Ln"></span>
+<span id="87L" class="Ln">    <span class="kt">void</span> <span class="def decl nf" id="synth::MultiTuProcessor::linkExternalRef:synth::Markup&amp;,CXCursor">linkExternalRef</span><span class="p">(</span><a href="output.hpp.html#synth::Markup" class="nc">Markup</a><span class="p">&amp;</span> <span class="def decl nv">m</span><span class="p">,</span> <a href="../lib-llvm/include/clang-c/Index.h.html#2385L" class="nc">CXCursor</a> <span class="def decl nv">mcur</span><span class="p">)</span></span>
+<span id="88L" class="Ln">    <span class="p">{</span></span>
+<span id="89L" class="Ln">        <a href="#synth::MultiTuProcessor::m_refLinker" class="vi">m_refLinker</a><span class="p">(</span><a href="#87L" class="nv">m</a><span class="p">,</span> <a href="#87L" class="nv">mcur</a><span class="p">)</span><span class="p">;</span></span>
+<span id="90L" class="Ln">    <span class="p">}</span></span>
+<span id="91L" class="Ln"></span>
+<span id="92L" class="Ln"><span class="kd">private</span><span class="p">:</span></span>
+<span id="93L" class="Ln"></span>
+<span id="94L" class="Ln">    <span class="kd">using</span> <span class="def decl nc" id="synth::MultiTuProcessor::FileEntryMap">FileEntryMap</span> <span class="p">=</span> <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/container/unordered_map" class="nc">unordered_map</a><span class="p">&lt;</span><a href="../lib-llvm/include/clang-c/Index.h.html#302L" class="nc">CXFileUniqueID</a><span class="p">,</span> <a href="#synth::FileEntry" class="nc">FileEntry</a><span class="p">></span><span class="p">;</span></span>
+<span id="95L" class="Ln"></span>
+<span id="96L" class="Ln">    <span class="c">// Returns nullptr if f should be ignored.</span></span>
+<span id="97L" class="Ln">    <a href="#synth::FileEntry" class="nc">FileEntry</a><span class="p">*</span> <a href="MultiTuProcessor.cpp.html#synth::MultiTuProcessor::obtainFileEntry:CXFile" class="decl nf" id="synth::MultiTuProcessor::obtainFileEntry:CXFile">obtainFileEntry</a><span class="p">(</span><a href="../lib-llvm/include/clang-c/Index.h.html#CXFile" class="nc">CXFile</a> <span class="def decl nv">f</span><span class="p">)</span><span class="p">;</span></span>
+<span id="98L" class="Ln"></span>
+<span id="99L" class="Ln">    <a href="#synth::PathMap" class="nc">PathMap</a><span class="p">::</span><span class="nc">value_type</span> <span class="kd">const</span><span class="p">*</span> <a href="MultiTuProcessor.cpp.html#synth::MultiTuProcessor::getFileMapping:const-fs::path&amp;" class="decl nf" id="synth::MultiTuProcessor::getFileMapping:const-fs::path&amp;">getFileMapping</a><span class="p">(</span><a href="#21L" class="nn">fs</a><span class="p">::</span><span class="nc">path</span> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">p</span><span class="p">)</span> <span class="kd">const</span><span class="p">;</span></span>
+<span id="100L" class="Ln"></span>
+<span id="101L" class="Ln"></span>
+<span id="102L" class="Ln">    <a href="#synth::MultiTuProcessor::FileEntryMap" class="nc">FileEntryMap</a> <span class="def decl vi" id="synth::MultiTuProcessor::m_processedFiles">m_processedFiles</span><span class="p">;</span></span>
+<span id="103L" class="Ln">    <a href="#synth::PathMap" class="nc">PathMap</a> <span class="def decl vi" id="synth::MultiTuProcessor::m_dirs">m_dirs</span><span class="p">;</span></span>
+<span id="104L" class="Ln"></span>
+<span id="105L" class="Ln">    <span class="c">// Maps from USRs to symbol declarations (referencing m_syms)</span></span>
+<span id="106L" class="Ln">    <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/container/unordered_map" class="nc">unordered_map</a><span class="p">&lt;</span><a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/string/basic_string" class="nc">string</a><span class="p">,</span> <a href="output.hpp.html#synth::SymbolDeclaration" class="nc">SymbolDeclaration</a> <span class="kd">const</span><span class="p">*</span><span class="p">></span> <span class="def decl vi" id="synth::MultiTuProcessor::m_defs">m_defs</span><span class="p">;</span></span>
+<span id="107L" class="Ln">    <a href="#synth::MultiTuProcessor::SymbolMap" class="nc">SymbolMap</a> <span class="def decl vi" id="synth::MultiTuProcessor::m_syms">m_syms</span><span class="p">;</span></span>
+<span id="108L" class="Ln"></span>
+<span id="109L" class="Ln">    <span class="c">// Common prefix of all keys in m_dirs</span></span>
+<span id="110L" class="Ln">    <a href="#21L" class="nn">fs</a><span class="p">::</span><span class="nc">path</span> <span class="def decl vi" id="synth::MultiTuProcessor::m_rootInDir">m_rootInDir</span><span class="p">;</span></span>
+<span id="111L" class="Ln"></span>
+<span id="112L" class="Ln">    <a href="#synth::ExternalRefLinker" class="nc">ExternalRefLinker</a> <span class="def decl vi" id="synth::MultiTuProcessor::m_refLinker">m_refLinker</span><span class="p">;</span></span>
+<span id="113L" class="Ln"></span>
+<span id="114L" class="Ln">    <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/types/size_t" class="nc">size_t</a> <span class="def decl vi" id="synth::MultiTuProcessor::m_maxIdSz">m_maxIdSz</span><span class="p">;</span> <span class="c">// Maximum length for fileUniqueNames in m_syms.</span></span>
+<span id="115L" class="Ln"></span>
+<span id="116L" class="Ln"></span>
+<span id="117L" class="Ln">    <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/thread/mutex" class="nc">mutex</a> <span class="def decl vi" id="synth::MultiTuProcessor::m_mut">m_mut</span><span class="p">;</span></span>
+<span id="118L" class="Ln"><span class="p">}</span><span class="p">;</span></span>
+<span id="119L" class="Ln"></span>
+<span id="120L" class="Ln"><span class="p">}</span> <span class="c">// namespace synth</span></span>
+<span id="121L" class="Ln"></span>
+<span id="122L" class="Ln"><span class="cp">#</span><span class="cp">endif</span></span>
+<span id="123L" class="Ln"></span>
+</pre></div>
+        <script src="../code.js"></script>
+    </body>
+</html>

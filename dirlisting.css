@@ -1,0 +1,35 @@
+@import 'base.css';
+
+.dirname {
+    font-weight: bold;
+    margin-top: 2em;
+}
+
+.dirname:after {
+    content: ":";
+}
+
+@media screen and (min-width: 500px), print {
+    .dir > ul {
+        column-count: 2;
+        -moz-column-count: 2;
+        -webkit-column-count: 2;
+    }
+}
+
+@media screen and (min-width: 900px) {
+    .dir > ul {
+        column-count: 3;
+        -moz-column-count: 3;
+        -webkit-column-count: 3;
+    }
+
+}
+
+@media screen and (min-width: 1200px) {
+    .dir > ul {
+        column-count: 4;
+        -moz-column-count: 4;
+        -webkit-column-count: 4;
+    }
+}

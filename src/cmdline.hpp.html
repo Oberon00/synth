@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>src/cmdline.hpp</title>
+        <link rel="stylesheet" href="../codestyle-colorful.css">
+    </head>
+    <body>
+        <div class="highlight"><pre><span id="1L" class="Ln"><span class="cp">#</span><span class="cp">ifndef</span> <span class="cp">SYNTH_CMDLINE_HPP_INCLUDED</span></span>
+<span id="2L" class="Ln"><span class="cp">#</span><span class="cp">define</span> <span class="cp">SYNTH_CMDLINE_HPP_INCLUDED</span></span>
+<span id="3L" class="Ln"></span>
+<span id="4L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">string</span><span class="cpf">></span></span>
+<span id="5L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">vector</span><span class="cpf">></span></span>
+<span id="6L" class="Ln"></span>
+<span id="7L" class="Ln"><span class="kd">namespace</span> <span class="def decl nn" id="synth">synth</span> <span class="p">{</span></span>
+<span id="8L" class="Ln"></span>
+<span id="9L" class="Ln"><span class="kd">struct</span> <span class="def decl nc" id="synth::CmdLineArgs">CmdLineArgs</span> <span class="p">{</span></span>
+<span id="10L" class="Ln">    <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/container/vector" class="nc">vector</a><span class="p">&lt;</span><a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/utility/pair" class="nc">pair</a><span class="p">&lt;</span><span class="kt">char</span> <span class="kd">const</span><span class="p">*</span><span class="p">,</span> <span class="kt">char</span> <span class="kd">const</span><span class="p">*</span><span class="p">>></span> <span class="def decl vi" id="synth::CmdLineArgs::inOutDirs">inOutDirs</span><span class="p">;</span></span>
+<span id="11L" class="Ln">    <span class="kt">char</span> <span class="kd">const</span><span class="p">*</span> <span class="def decl vi" id="synth::CmdLineArgs::templateFile">templateFile</span><span class="p">;</span></span>
+<span id="12L" class="Ln"></span>
+<span id="13L" class="Ln">    <span class="c">// first: Doxytag filename. second: Base URL.</span></span>
+<span id="14L" class="Ln">    <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/container/vector" class="nc">vector</a><span class="p">&lt;</span><a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/utility/pair" class="nc">pair</a><span class="p">&lt;</span><span class="kt">char</span> <span class="kd">const</span><span class="p">*</span><span class="p">,</span> <span class="kt">char</span> <span class="kd">const</span><span class="p">*</span><span class="p">>></span> <span class="def decl vi" id="synth::CmdLineArgs::doxyTagFiles">doxyTagFiles</span><span class="p">;</span></span>
+<span id="15L" class="Ln"></span>
+<span id="16L" class="Ln">    <span class="kt">int</span> <span class="def decl vi" id="synth::CmdLineArgs::nClangArgs">nClangArgs</span><span class="p">;</span></span>
+<span id="17L" class="Ln"></span>
+<span id="18L" class="Ln">    <span class="c">// Extra-arguments if in CompilationDb mode, otherwise the whole cmdline.</span></span>
+<span id="19L" class="Ln">    <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/container/vector" class="nc">vector</a><span class="p">&lt;</span><span class="kt">char</span> <span class="kd">const</span><span class="p">*</span><span class="p">></span> <span class="def decl vi" id="synth::CmdLineArgs::clangArgs">clangArgs</span><span class="p">;</span></span>
+<span id="20L" class="Ln"></span>
+<span id="21L" class="Ln">    <span class="kt">char</span> <span class="kd">const</span><span class="p">*</span> <span class="def decl vi" id="synth::CmdLineArgs::compilationDbDir">compilationDbDir</span><span class="p">;</span></span>
+<span id="22L" class="Ln"></span>
+<span id="23L" class="Ln">    <span class="kd">static</span> <a href="#synth::CmdLineArgs" class="nc">CmdLineArgs</a> <a href="cmdline.cpp.html#synth::CmdLineArgs::parse:int,const-char*const*" class="decl nf" id="synth::CmdLineArgs::parse:int,const-char*const*">parse</a><span class="p">(</span><span class="kt">int</span> <span class="def decl nv">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="kd">const</span><span class="p">*</span> <span class="kd">const</span><span class="p">*</span> <span class="def decl nv">argv</span><span class="p">)</span><span class="p">;</span></span>
+<span id="24L" class="Ln"></span>
+<span id="25L" class="Ln">    <span class="kt">unsigned</span> <span class="def decl vi" id="synth::CmdLineArgs::nThreads">nThreads</span><span class="p">;</span></span>
+<span id="26L" class="Ln"></span>
+<span id="27L" class="Ln">    <span class="kt">unsigned</span> <span class="def decl vi" id="synth::CmdLineArgs::maxIdSz">maxIdSz</span><span class="p">;</span></span>
+<span id="28L" class="Ln"><span class="p">}</span><span class="p">;</span></span>
+<span id="29L" class="Ln"></span>
+<span id="30L" class="Ln"><span class="p">}</span> <span class="c">// namespace synth</span></span>
+<span id="31L" class="Ln"></span>
+<span id="32L" class="Ln"><span class="cp">#</span><span class="cp">endif</span> <span class="cp">// SYNTH_CMDLINE_HPP_INCLUDED</span></span>
+<span id="33L" class="Ln"></span>
+</pre></div>
+        <script src="../code.js"></script>
+    </body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>src/DoxytagResolver.hpp</title>
+        <link rel="stylesheet" href="../codestyle-colorful.css">
+    </head>
+    <body>
+        <div class="highlight"><pre><span id="1L" class="Ln"><span class="cp">#</span><span class="cp">ifndef</span> <span class="cp">SYNTH_DOXYTAG_RESOLVER_HPP_INCLUDED</span></span>
+<span id="2L" class="Ln"><span class="cp">#</span><span class="cp">define</span> <span class="cp">SYNTH_DOXYTAG_RESOLVER_HPP_INCLUDED</span></span>
+<span id="3L" class="Ln"></span>
+<span id="4L" class="Ln"><a href="../lib-llvm/include/clang-c/Index.h.html"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">clang</span><span class="cpf">-</span><span class="cpf">c</span><span class="cpf">/</span><span class="cpf">Index</span><span class="cpf">.</span><span class="cpf">h</span><span class="cpf">></span></a></span>
+<span id="5L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">boost</span><span class="cpf">/</span><span class="cpf">property_tree</span><span class="cpf">/</span><span class="cpf">ptree_fwd</span><span class="cpf">.</span><span class="cpf">hpp</span><span class="cpf">></span></span>
+<span id="6L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">boost</span><span class="cpf">/</span><span class="cpf">filesystem</span><span class="cpf">/</span><span class="cpf">path</span><span class="cpf">.</span><span class="cpf">hpp</span><span class="cpf">></span></span>
+<span id="7L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">boost</span><span class="cpf">/</span><span class="cpf">utility</span><span class="cpf">/</span><span class="cpf">string_ref_fwd</span><span class="cpf">.</span><span class="cpf">hpp</span><span class="cpf">></span></span>
+<span id="8L" class="Ln"></span>
+<span id="9L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">unordered_map</span><span class="cpf">></span></span>
+<span id="10L" class="Ln"></span>
+<span id="11L" class="Ln"><span class="kd">namespace</span> <span class="def decl nn" id="synth">synth</span> <span class="p">{</span></span>
+<span id="12L" class="Ln"></span>
+<span id="13L" class="Ln"><span class="kd">struct</span> <a href="output.hpp.html#synth::Markup" class="decl nc" id="synth::Markup">Markup</a><span class="p">;</span></span>
+<span id="14L" class="Ln"></span>
+<span id="15L" class="Ln"><span class="kd">namespace</span> <span class="decl nn">ptree</span> <span class="p">=</span> <span class="nn">boost</span><span class="p">::</span><span class="nn">property_tree</span><span class="p">;</span></span>
+<span id="16L" class="Ln"><span class="kd">namespace</span> <span class="decl nn">fs</span> <span class="p">=</span> <span class="nn">boost</span><span class="p">::</span><span class="nn">filesystem</span><span class="p">;</span></span>
+<span id="17L" class="Ln"></span>
+<span id="18L" class="Ln"><span class="kd">class</span> <span class="def decl nc" id="synth::DoxytagResolver">DoxytagResolver</span> <span class="p">{</span></span>
+<span id="19L" class="Ln"><span class="kd">public</span><span class="p">:</span></span>
+<span id="20L" class="Ln">    <a href="DoxytagResolver.cpp.html#synth::DoxytagResolver::DoxytagResolver:const-ptree::ptree&amp;,boost::string_ref" class="decl nf" id="synth::DoxytagResolver::DoxytagResolver:const-ptree::ptree&amp;,boost::string_ref">DoxytagResolver</a><span class="p">(</span><a href="#15L" class="nn">ptree</a><span class="p">::</span><span class="nc">ptree</span> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">tagFileDom</span><span class="p">,</span> <span class="nn">boost</span><span class="p">::</span><span class="nc">string_ref</span> <span class="def decl nv">baseUrl</span><span class="p">)</span><span class="p">;</span></span>
+<span id="21L" class="Ln"></span>
+<span id="22L" class="Ln">    <span class="kd">static</span> <a href="#synth::DoxytagResolver" class="nc">DoxytagResolver</a> <a href="DoxytagResolver.cpp.html#synth::DoxytagResolver::fromTagFilename:const-fs::path&amp;,boost::string_ref" class="decl nf" id="synth::DoxytagResolver::fromTagFilename:const-fs::path&amp;,boost::string_ref">fromTagFilename</a><span class="p">(</span></span>
+<span id="23L" class="Ln">        <a href="#16L" class="nn">fs</a><span class="p">::</span><span class="nc">path</span> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">fname</span><span class="p">,</span> <span class="nn">boost</span><span class="p">::</span><span class="nc">string_ref</span> <span class="def decl nv">baseUrl</span><span class="p">)</span><span class="p">;</span></span>
+<span id="24L" class="Ln"></span>
+<span id="25L" class="Ln">    <span class="kt">void</span> <a href="DoxytagResolver.cpp.html#synth::DoxytagResolver::link:synth::Markup&amp;,CXCursor" class="decl nf" id="synth::DoxytagResolver::link:synth::Markup&amp;,CXCursor">link</a><span class="p">(</span><a href="output.hpp.html#synth::Markup" class="nc">Markup</a><span class="p">&amp;</span> <span class="def decl nv">m</span><span class="p">,</span> <a href="../lib-llvm/include/clang-c/Index.h.html#2385L" class="nc">CXCursor</a> <span class="def decl nv">cur</span><span class="p">)</span><span class="p">;</span></span>
+<span id="26L" class="Ln"></span>
+<span id="27L" class="Ln"><span class="kd">private</span><span class="p">:</span></span>
+<span id="28L" class="Ln">    <span class="kt">void</span> <a href="DoxytagResolver.cpp.html#synth::DoxytagResolver::parseCompound:const-ptree::ptree&amp;,const-std::string&amp;" class="decl nf" id="synth::DoxytagResolver::parseCompound:const-ptree::ptree&amp;,const-std::string&amp;">parseCompound</a><span class="p">(</span><a href="#15L" class="nn">ptree</a><span class="p">::</span><span class="nc">ptree</span> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">compound</span><span class="p">,</span> <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/string/basic_string" class="nc">string</a> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">prefix</span><span class="p">)</span><span class="p">;</span></span>
+<span id="29L" class="Ln">    <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/string/basic_string" class="nc">string</a> <span class="kd">const</span><span class="p">*</span> <a href="DoxytagResolver.cpp.html#synth::DoxytagResolver::addTag:const-ptree::ptree&amp;,const-std::string&amp;" class="decl nf" id="synth::DoxytagResolver::addTag:const-ptree::ptree&amp;,const-std::string&amp;">addTag</a><span class="p">(</span><a href="#15L" class="nn">ptree</a><span class="p">::</span><span class="nc">ptree</span> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">tag</span><span class="p">,</span> <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/string/basic_string" class="nc">string</a> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">prefix</span><span class="p">)</span><span class="p">;</span></span>
+<span id="30L" class="Ln"></span>
+<span id="31L" class="Ln">    <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/string/basic_string" class="nc">string</a> <span class="def decl vi" id="synth::DoxytagResolver::m_baseUrl">m_baseUrl</span><span class="p">;</span></span>
+<span id="32L" class="Ln">    <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/container/unordered_map" class="nc">unordered_map</a><span class="p">&lt;</span><a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/string/basic_string" class="nc">string</a><span class="p">,</span> <a href="http://en.cppreference.com/w/" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/string/basic_string" class="nc">string</a><span class="p">></span> <span class="def decl vi" id="synth::DoxytagResolver::m_dsts">m_dsts</span><span class="p">;</span></span>
+<span id="33L" class="Ln"><span class="p">}</span><span class="p">;</span></span>
+<span id="34L" class="Ln"></span>
+<span id="35L" class="Ln"><span class="p">}</span> <span class="c">// namespace synth</span></span>
+<span id="36L" class="Ln"></span>
+<span id="37L" class="Ln"><span class="cp">#</span><span class="cp">endif</span> <span class="cp">// SYNTH_DOXYTAGRESOLVER_HPP_INCLUDED</span></span>
+<span id="38L" class="Ln"></span>
+</pre></div>
+        <script src="../code.js"></script>
+    </body>
+</html>

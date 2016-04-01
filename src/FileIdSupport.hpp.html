@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>src/FileIdSupport.hpp</title>
+        <link rel="stylesheet" href="../codestyle-colorful.css">
+    </head>
+    <body>
+        <div class="highlight"><pre><span id="1L" class="Ln"><span class="cp">#</span><span class="cp">ifndef</span> <span class="cp">FILE_ID_SUPPORT_HPP_INCLUDED</span></span>
+<span id="2L" class="Ln"><span class="cp">#</span><span class="cp">define</span> <span class="cp">FILE_ID_SUPPORT_HPP_INCLUDED</span></span>
+<span id="3L" class="Ln"></span>
+<span id="4L" class="Ln"><a href="../lib-llvm/include/clang-c/Index.h.html"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">clang</span><span class="cpf">-</span><span class="cpf">c</span><span class="cpf">/</span><span class="cpf">Index</span><span class="cpf">.</span><span class="cpf">h</span><span class="cpf">></span></a></span>
+<span id="5L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">algorithm</span><span class="cpf">></span></span>
+<span id="6L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">functional</span><span class="cpf">></span></span>
+<span id="7L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">boost</span><span class="cpf">/</span><span class="cpf">functional</span><span class="cpf">/</span><span class="cpf">hash</span><span class="cpf">/</span><span class="cpf">hash</span><span class="cpf">.</span><span class="cpf">hpp</span><span class="cpf">></span></span>
+<span id="8L" class="Ln"></span>
+<span id="9L" class="Ln"><span class="kd">namespace</span> <a href="http://en.cppreference.com/w/" class="def decl nn" id="std">std</a> <span class="p">{</span></span>
+<span id="10L" class="Ln">    <span class="kd">template</span> <span class="p">&lt;</span><span class="p">></span></span>
+<span id="11L" class="Ln">    <span class="kd">struct</span> <span class="def decl nc" id="std::hash<CXFileUniqueID>">hash</span><span class="p">&lt;</span><a href="../lib-llvm/include/clang-c/Index.h.html#302L" class="nc">CXFileUniqueID</a><span class="p">></span> <span class="p">{</span></span>
+<span id="12L" class="Ln">        <a href="#std" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/types/size_t" class="nc">size_t</a> <span class="def decl " id="std::hash<CXFileUniqueID>::operator():const-CXFileUniqueID&amp;"><span class="kd">operator</span><span class="p">(</span><span class="p">)</span></span> <span class="p">(</span><a href="../lib-llvm/include/clang-c/Index.h.html#302L" class="nc">CXFileUniqueID</a> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">uid</span><span class="p">)</span> <span class="kd">const</span> <span class="p">{</span></span>
+<span id="13L" class="Ln">            <span class="kt">int</span> <span class="kd">constexpr</span> <span class="def decl nv">nelems</span> <span class="p">=</span> <span class="ow">sizeof</span><span class="p">(</span><a href="#12L" class="nv">uid</a><span class="p">.</span><a href="../lib-llvm/include/clang-c/Index.h.html#CXFileUniqueID::data" class="vi">data</a><span class="p">)</span> <span class="o">/</span> <span class="ow">sizeof</span><span class="p">(</span><a href="#12L" class="nv">uid</a><span class="p">.</span><a href="../lib-llvm/include/clang-c/Index.h.html#CXFileUniqueID::data" class="vi">data</a><span class="p">[</span><span class="m">0</span><span class="p">]</span><span class="p">)</span><span class="p">;</span></span>
+<span id="14L" class="Ln">            <a href="#std" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/utility/hash" class="nc">hash</a><span class="p">&lt;</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span><span class="p">></span> <span class="def decl nv">hasher</span><span class="p">;</span></span>
+<span id="15L" class="Ln">            <a href="#std" class="nn">std</a><span class="p">::</span><a href="http://en.cppreference.com/w/cpp/types/size_t" class="nc">size_t</a> <span class="def decl nv">h</span> <span class="p">=</span> <a href="#14L" class="nv">hasher</a><span class="p">(</span><a href="#12L" class="nv">uid</a><span class="p">.</span><a href="../lib-llvm/include/clang-c/Index.h.html#CXFileUniqueID::data" class="vi">data</a><span class="p">[</span><span class="m">0</span><span class="p">]</span><span class="p">)</span><span class="p">;</span></span>
+<span id="16L" class="Ln">            <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="def decl nv">i</span> <span class="p">=</span> <span class="m">1</span><span class="p">;</span> <a href="#16L" class="nv">i</a> <span class="o">&lt;</span> <a href="#13L" class="nv">nelems</a><span class="p">;</span> <span class="o">++</span><a href="#16L" class="nv">i</a><span class="p">)</span></span>
+<span id="17L" class="Ln">                <span class="nn">boost</span><span class="p">::</span><span class="nf">hash_combine</span><span class="p">(</span><a href="#15L" class="nv">h</a><span class="p">,</span> <a href="#14L" class="nv">hasher</a><span class="p">(</span><a href="#12L" class="nv">uid</a><span class="p">.</span><a href="../lib-llvm/include/clang-c/Index.h.html#CXFileUniqueID::data" class="vi">data</a><span class="p">[</span><a href="#16L" class="nv">i</a><span class="p">]</span><span class="p">)</span><span class="p">)</span><span class="p">;</span></span>
+<span id="18L" class="Ln">            <span class="k">return</span> <a href="#15L" class="nv">h</a><span class="p">;</span></span>
+<span id="19L" class="Ln">        <span class="p">}</span></span>
+<span id="20L" class="Ln">    <span class="p">}</span><span class="p">;</span></span>
+<span id="21L" class="Ln"></span>
+<span id="22L" class="Ln">    <span class="kd">template</span> <span class="p">&lt;</span><span class="p">></span></span>
+<span id="23L" class="Ln">    <span class="kd">struct</span> <span class="def decl nc" id="std::equal_to<CXFileUniqueID>">equal_to</span><span class="p">&lt;</span><a href="../lib-llvm/include/clang-c/Index.h.html#302L" class="nc">CXFileUniqueID</a><span class="p">></span> <span class="p">{</span></span>
+<span id="24L" class="Ln">        <span class="kt">bool</span> <span class="def decl " id="std::equal_to<CXFileUniqueID>::operator():const-CXFileUniqueID&amp;,const-CXFileUniqueID&amp;"><span class="kd">operator</span><span class="p">(</span><span class="p">)</span></span> <span class="p">(</span><a href="../lib-llvm/include/clang-c/Index.h.html#302L" class="nc">CXFileUniqueID</a> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">lhs</span><span class="p">,</span> <a href="../lib-llvm/include/clang-c/Index.h.html#302L" class="nc">CXFileUniqueID</a> <span class="kd">const</span><span class="p">&amp;</span> <span class="def decl nv">rhs</span><span class="p">)</span> <span class="kd">const</span> <span class="p">{</span></span>
+<span id="25L" class="Ln">            <span class="k">return</span> <a href="#std" class="nn">std</a><span class="p">::</span><span class="nf">equal</span><span class="p">(</span></span>
+<span id="26L" class="Ln">                <a href="#std" class="nn">std</a><span class="p">::</span><span class="nf">begin</span><span class="p">(</span><a href="#24L" class="nv">lhs</a><span class="p">.</span><a href="../lib-llvm/include/clang-c/Index.h.html#CXFileUniqueID::data" class="vi">data</a><span class="p">)</span><span class="p">,</span></span>
+<span id="27L" class="Ln">                <a href="#std" class="nn">std</a><span class="p">::</span><span class="nf">end</span><span class="p">(</span><a href="#24L" class="nv">lhs</a><span class="p">.</span><a href="../lib-llvm/include/clang-c/Index.h.html#CXFileUniqueID::data" class="vi">data</a><span class="p">)</span><span class="p">,</span></span>
+<span id="28L" class="Ln">                <a href="#std" class="nn">std</a><span class="p">::</span><span class="nf">begin</span><span class="p">(</span><a href="#24L" class="nv">rhs</a><span class="p">.</span><a href="../lib-llvm/include/clang-c/Index.h.html#CXFileUniqueID::data" class="vi">data</a><span class="p">)</span><span class="p">)</span><span class="p">;</span></span>
+<span id="29L" class="Ln">        <span class="p">}</span></span>
+<span id="30L" class="Ln">    <span class="p">}</span><span class="p">;</span></span>
+<span id="31L" class="Ln"><span class="p">}</span></span>
+<span id="32L" class="Ln"></span>
+<span id="33L" class="Ln"><span class="cp">#</span><span class="cp">endif</span></span>
+<span id="34L" class="Ln"></span>
+</pre></div>
+        <script src="../code.js"></script>
+    </body>
+</html>

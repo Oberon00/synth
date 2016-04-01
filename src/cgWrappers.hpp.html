@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>src/cgWrappers.hpp</title>
+        <link rel="stylesheet" href="../codestyle-colorful.css">
+    </head>
+    <body>
+        <div class="highlight"><pre><span id="1L" class="Ln"><span class="cp">#</span><span class="cp">ifndef</span> <span class="cp">SYNTH_CGWRAPPERS_HPP_INCLUDED</span></span>
+<span id="2L" class="Ln"><span class="cp">#</span><span class="cp">define</span> <span class="cp">SYNTH_CGWRAPPERS_HPP_INCLUDED</span></span>
+<span id="3L" class="Ln"></span>
+<span id="4L" class="Ln"><a href="../lib-llvm/include/clang-c/CXCompilationDatabase.h.html"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">clang</span><span class="cpf">-</span><span class="cpf">c</span><span class="cpf">/</span><span class="cpf">CXCompilationDatabase</span><span class="cpf">.</span><span class="cpf">h</span><span class="cpf">></span></a></span>
+<span id="5L" class="Ln"><a href="../lib-llvm/include/clang-c/Index.h.html"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">clang</span><span class="cpf">-</span><span class="cpf">c</span><span class="cpf">/</span><span class="cpf">Index</span><span class="cpf">.</span><span class="cpf">h</span><span class="cpf">></span></a></span>
+<span id="6L" class="Ln"></span>
+<span id="7L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">boost</span><span class="cpf">/</span><span class="cpf">noncopyable</span><span class="cpf">.</span><span class="cpf">hpp</span><span class="cpf">></span></span>
+<span id="8L" class="Ln"></span>
+<span id="9L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">memory</span><span class="cpf">></span></span>
+<span id="10L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">type_traits</span><span class="cpf">></span> <span class="cp">// remove_pointer_t</span></span>
+<span id="11L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">vector</span><span class="cpf">></span></span>
+<span id="12L" class="Ln"></span>
+<span id="13L" class="Ln"><span class="kd">namespace</span> <span class="def decl nn" id="synth">synth</span> <span class="p">{</span></span>
+<span id="14L" class="Ln"></span>
+<span id="15L" class="Ln"><span class="kd">class</span> <span class="def decl nc" id="synth::CgTokensHandle">CgTokensHandle</span> <span class="p">{</span></span>
+<span id="16L" class="Ln"><span class="kd">public</span><span class="p">:</span></span>
+<span id="17L" class="Ln">    <span class="def decl nf" id="synth::CgTokensHandle::CgTokensHandle:CXToken*,unsigned-int,CXTranslationUnit">CgTokensHandle</span><span class="p">(</span><a href="../lib-llvm/include/clang-c/Index.h.html#4250L" class="nc">CXToken</a><span class="p">*</span> <span class="def decl nv">data</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="def decl nv">ntokens</span><span class="p">,</span> <a href="../lib-llvm/include/clang-c/Index.h.html#CXTranslationUnit" class="nc">CXTranslationUnit</a> <span class="def decl nv">tu_</span><span class="p">)</span></span>
+<span id="18L" class="Ln">        <span class="p">:</span> <a href="#synth::CgTokensHandle::m_data" class="vi">m_data</a><span class="p">(</span><a href="#17L" class="nv">data</a><span class="p">)</span><span class="p">,</span> <a href="#synth::CgTokensHandle::m_ntokens" class="vi">m_ntokens</a><span class="p">(</span><a href="#17L" class="nv">ntokens</a><span class="p">)</span><span class="p">,</span> <a href="#synth::CgTokensHandle::m_tu" class="vi">m_tu</a><span class="p">(</span><a href="#17L" class="nv">tu_</a><span class="p">)</span></span>
+<span id="19L" class="Ln">    <span class="p">{</span><span class="p">}</span></span>
+<span id="20L" class="Ln"></span>
+<span id="21L" class="Ln">    <span class="def decl " id="synth::CgTokensHandle::~CgTokensHandle"><span class="p">~</span><span class="nf">CgTokensHandle</span></span><span class="p">(</span><span class="p">)</span> <span class="p">{</span> <a href="#synth::CgTokensHandle::destroy" class="nf">destroy</a><span class="p">(</span><span class="p">)</span><span class="p">;</span> <span class="p">}</span></span>
+<span id="22L" class="Ln"></span>
+<span id="23L" class="Ln">    <span class="def decl nf" id="synth::CgTokensHandle::CgTokensHandle:synth::CgTokensHandle&amp;&amp;">CgTokensHandle</span><span class="p">(</span><a href="#synth::CgTokensHandle" class="nc">CgTokensHandle</a><span class="p">&amp;&amp;</span> <span class="def decl nv">other</span><span class="p">)</span></span>
+<span id="24L" class="Ln">        <span class="p">:</span> <a href="#synth::CgTokensHandle::m_data" class="vi">m_data</a><span class="p">(</span><a href="#23L" class="nv">other</a><span class="p">.</span><a href="#synth::CgTokensHandle::m_data" class="vi">m_data</a><span class="p">)</span></span>
+<span id="25L" class="Ln">        <span class="p">,</span> <a href="#synth::CgTokensHandle::m_ntokens" class="vi">m_ntokens</a><span class="p">(</span><a href="#23L" class="nv">other</a><span class="p">.</span><a href="#synth::CgTokensHandle::m_ntokens" class="vi">m_ntokens</a><span class="p">)</span></span>
+<span id="26L" class="Ln">        <span class="p">,</span> <a href="#synth::CgTokensHandle::m_tu" class="vi">m_tu</a><span class="p">(</span><a href="#23L" class="nv">other</a><span class="p">.</span><a href="#synth::CgTokensHandle::m_tu" class="vi">m_tu</a><span class="p">)</span></span>
+<span id="27L" class="Ln">    <span class="p">{</span></span>
+<span id="28L" class="Ln">        <a href="#23L" class="nv">other</a><span class="p">.</span><a href="#synth::CgTokensHandle::release" class="nf">release</a><span class="p">(</span><span class="p">)</span><span class="p">;</span></span>
+<span id="29L" class="Ln">    <span class="p">}</span></span>
+<span id="30L" class="Ln"></span>
+<span id="31L" class="Ln">    <a href="#synth::CgTokensHandle" class="nc">CgTokensHandle</a><span class="p">&amp;</span> <span class="def decl " id="synth::CgTokensHandle::operator=:synth::CgTokensHandle&amp;&amp;"><span class="kd">operator</span><span class="p">=</span></span> <span class="p">(</span><a href="#synth::CgTokensHandle" class="nc">CgTokensHandle</a><span class="p">&amp;&amp;</span> <span class="def decl nv">other</span><span class="p">)</span></span>
+<span id="32L" class="Ln">    <span class="p">{</span></span>
+<span id="33L" class="Ln">        <a href="#synth::CgTokensHandle::destroy" class="nf">destroy</a><span class="p">(</span><span class="p">)</span><span class="p">;</span></span>
+<span id="34L" class="Ln">        <a href="#synth::CgTokensHandle::m_data" class="vi">m_data</a> <span class="o">=</span> <a href="#31L" class="nv">other</a><span class="p">.</span><a href="#synth::CgTokensHandle::m_data" class="vi">m_data</a><span class="p">;</span></span>
+<span id="35L" class="Ln">        <a href="#synth::CgTokensHandle::m_ntokens" class="vi">m_ntokens</a> <span class="o">=</span> <a href="#31L" class="nv">other</a><span class="p">.</span><a href="#synth::CgTokensHandle::m_ntokens" class="vi">m_ntokens</a><span class="p">;</span></span>
+<span id="36L" class="Ln">        <a href="#synth::CgTokensHandle::m_tu" class="vi">m_tu</a> <span class="o">=</span> <a href="#31L" class="nv">other</a><span class="p">.</span><a href="#synth::CgTokensHandle::m_tu" class="vi">m_tu</a><span class="p">;</span></span>
+<span id="37L" class="Ln">        <a href="#31L" class="nv">other</a><span class="p">.</span><a href="#synth::CgTokensHandle::release" class="nf">release</a><span class="p">(</span><span class="p">)</span><span class="p">;</span></span>
+<span id="38L" class="Ln">        <span class="k">return</span> <span class="o">*</span><span class="kc">this</span><span class="p">;</span></span>
+<span id="39L" class="Ln">    <span class="p">}</span></span>
+<span id="40L" class="Ln"></span>
+<span id="41L" class="Ln">    <a href="../lib-llvm/include/clang-c/Index.h.html#CXTranslationUnit" class="nc">CXTranslationUnit</a> <span class="def decl nf" id="synth::CgTokensHandle::tu">tu</span><span class="p">(</span><span class="p">)</span> <span class="kd">const</span> <span class="p">{</span> <span class="k">return</span> <a href="#synth::CgTokensHandle::m_tu" class="vi">m_tu</a><span class="p">;</span> <span class="p">}</span></span>
+<span id="42L" class="Ln">    <span class="kt">unsigned</span> <span class="def decl nf" id="synth::CgTokensHandle::size">size</span><span class="p">(</span><span class="p">)</span> <span class="kd">const</span> <span class="p">{</span> <span class="k">return</span> <a href="#synth::CgTokensHandle::m_ntokens" class="vi">m_ntokens</a><span class="p">;</span> <span class="p">}</span></span>
+<span id="43L" class="Ln">    <a href="../lib-llvm/include/clang-c/Index.h.html#4250L" class="nc">CXToken</a><span class="p">*</span> <span class="def decl nf" id="synth::CgTokensHandle::tokens">tokens</span><span class="p">(</span><span class="p">)</span> <span class="p">{</span> <span class="k">return</span> <a href="#synth::CgTokensHandle::m_data" class="vi">m_data</a><span class="p">;</span> <span class="p">}</span></span>
+<span id="44L" class="Ln"></span>
+<span id="45L" class="Ln"><span class="kd">private</span><span class="p">:</span></span>
+<span id="46L" class="Ln">    <span class="kt">void</span> <span class="def decl nf" id="synth::CgTokensHandle::destroy">destroy</span><span class="p">(</span><span class="p">)</span></span>
+<span id="47L" class="Ln">    <span class="p">{</span></span>
+<span id="48L" class="Ln">        <span class="k">if</span> <span class="p">(</span><a href="#synth::CgTokensHandle::m_data" class="vi">m_data</a><span class="p">)</span></span>
+<span id="49L" class="Ln">            <a href="../lib-llvm/include/clang-c/Index.h.html#clang_disposeTokens:CXTranslationUnit,CXToken*,unsigned-int" class="nf">clang_disposeTokens</a><span class="p">(</span><a href="#synth::CgTokensHandle::m_tu" class="vi">m_tu</a><span class="p">,</span> <a href="#synth::CgTokensHandle::m_data" class="vi">m_data</a><span class="p">,</span> <a href="#synth::CgTokensHandle::m_ntokens" class="vi">m_ntokens</a><span class="p">)</span><span class="p">;</span></span>
+<span id="50L" class="Ln">    <span class="p">}</span></span>
+<span id="51L" class="Ln"></span>
+<span id="52L" class="Ln">    <span class="kt">void</span> <span class="def decl nf" id="synth::CgTokensHandle::release">release</span><span class="p">(</span><span class="p">)</span></span>
+<span id="53L" class="Ln">    <span class="p">{</span></span>
+<span id="54L" class="Ln">        <a href="#synth::CgTokensHandle::m_ntokens" class="vi">m_ntokens</a> <span class="o">=</span> <span class="m">0</span><span class="p">;</span></span>
+<span id="55L" class="Ln">        <a href="#synth::CgTokensHandle::m_data" class="vi">m_data</a> <span class="o">=</span> <span class="kc">nullptr</span><span class="p">;</span></span>
+<span id="56L" class="Ln">    <span class="p">}</span></span>
+<span id="57L" class="Ln"></span>
+<span id="58L" class="Ln">    <a href="../lib-llvm/include/clang-c/Index.h.html#4250L" class="nc">CXToken</a><span class="p">*</span> <span class="def decl vi" id="synth::CgTokensHandle::m_data">m_data</span><span class="p">;</span></span>
+<span id="59L" class="Ln">    <span class="kt">unsigned</span> <span class="def decl vi" id="synth::CgTokensHandle::m_ntokens">m_ntokens</span><span class="p">;</span></span>
+<span id="60L" class="Ln">    <a href="../lib-llvm/include/clang-c/Index.h.html#CXTranslationUnit" class="nc">CXTranslationUnit</a> <span class="def decl vi" id="synth::CgTokensHandle::m_tu">m_tu</span><span class="p">;</span></span>
+<span id="61L" class="Ln"><span class="p">}</span><span class="p">;</span></span>
+<span id="62L" class="Ln"></span>
+<span id="63L" class="Ln"><span class="cp">#</span><span class="cp">define</span> <span class="cp">SYNTH_DEF_DELETER</span><span class="cp">(</span><span class="cp">n</span><span class="cp">,</span> <span class="cp">t</span><span class="cp">,</span> <span class="cp">f</span><span class="cp">)</span>               \</span>
+<span id="64L" class="Ln">    <span class="cp">struct</span> <span class="cp">DeleterFor</span><span class="cp">##</span><span class="cp">n</span> <span class="cp">{</span>                    \</span>
+<span id="65L" class="Ln">        <span class="cp">void</span> <span class="cp">operator</span><span class="cp">(</span><span class="cp">)</span> <span class="cp">(</span><span class="cp">t</span> <span class="cp">v</span><span class="cp">)</span> <span class="cp">const</span> <span class="cp">{</span> <span class="cp">f</span><span class="cp">(</span><span class="cp">v</span><span class="cp">)</span><span class="cp">;</span> <span class="cp">}</span> \</span>
+<span id="66L" class="Ln">    <span class="cp">}</span><span class="cp">;</span></span>
+<span id="67L" class="Ln"></span>
+<span id="68L" class="Ln"><span class="cp">#</span><span class="cp">define</span> <span class="cp">SYNTH_DEF_HANDLE</span><span class="cp">(</span><span class="cp">n</span><span class="cp">,</span> <span class="cp">t</span><span class="cp">,</span> <span class="cp">delf</span><span class="cp">)</span> \</span>
+<span id="69L" class="Ln">    <a href="#63L" class="cp">SYNTH_DEF_DELETER</a><span class="cp">(</span><span class="cp">n</span><span class="cp">,</span> <span class="cp">t</span><span class="cp">,</span> <span class="cp">delf</span><span class="cp">)</span>       \</span>
+<span id="70L" class="Ln">    <span class="cp">using</span> <span class="cp">n</span> <span class="cp">=</span> <span class="cp">std</span><span class="cp">::</span><span class="cp">unique_ptr</span><span class="cp">&lt;</span>       \</span>
+<span id="71L" class="Ln">        <span class="cp">std</span><span class="cp">::</span><span class="cp">remove_pointer_t</span><span class="cp">&lt;</span><span class="cp">t</span><span class="cp">></span><span class="cp">,</span> <span class="cp">DeleterFor</span><span class="cp">##</span><span class="cp">n</span><span class="cp">></span><span class="cp">;</span></span>
+<span id="72L" class="Ln"></span>
+<span id="73L" class="Ln"><a href="#68L" class="cp">SYNTH_DEF_HANDLE</a>(<span class="def decl nc" id="synth::CgIdxHandle">CgIdxHandle</span>, <a href="../lib-llvm/include/clang-c/Index.h.html#CXIndex" class="nc">CXIndex</a>, <a href="../lib-llvm/include/clang-c/Index.h.html#clang_disposeIndex:CXIndex" class="nf">clang_disposeIndex</a>)</span>
+<span id="74L" class="Ln"><a href="#68L" class="cp">SYNTH_DEF_HANDLE</a>(<span class="def decl nc" id="synth::CgTuHandle">CgTuHandle</span>, <a href="../lib-llvm/include/clang-c/Index.h.html#CXTranslationUnit" class="nc">CXTranslationUnit</a>, <a href="../lib-llvm/include/clang-c/Index.h.html#clang_disposeTranslationUnit:CXTranslationUnit" class="nf">clang_disposeTranslationUnit</a>)</span>
+<span id="75L" class="Ln"><a href="#68L" class="cp">SYNTH_DEF_HANDLE</a>(</span>
+<span id="76L" class="Ln">    <span class="def decl nc" id="synth::CgDbHandle">CgDbHandle</span>, <a href="../lib-llvm/include/clang-c/CXCompilationDatabase.h.html#CXCompilationDatabase" class="nc">CXCompilationDatabase</a>, <a href="../lib-llvm/include/clang-c/CXCompilationDatabase.h.html#clang_CompilationDatabase_dispose:CXCompilationDatabase" class="nf">clang_CompilationDatabase_dispose</a>)</span>
+<span id="77L" class="Ln"><a href="#68L" class="cp">SYNTH_DEF_HANDLE</a>(</span>
+<span id="78L" class="Ln">    <span class="def decl nc" id="synth::CgCmdsHandle">CgCmdsHandle</span>, <a href="../lib-llvm/include/clang-c/CXCompilationDatabase.h.html#CXCompileCommands" class="nc">CXCompileCommands</a>, <a href="../lib-llvm/include/clang-c/CXCompilationDatabase.h.html#clang_CompileCommands_dispose:CXCompileCommands" class="nf">clang_CompileCommands_dispose</a>)</span>
+<span id="79L" class="Ln"><a href="#68L" class="cp">SYNTH_DEF_HANDLE</a>(<span class="def decl nc" id="synth::CgSourceRangesHandle">CgSourceRangesHandle</span>, <a href="../lib-llvm/include/clang-c/Index.h.html#611L" class="nc">CXSourceRangeList</a><span class="p">*</span>, <a href="../lib-llvm/include/clang-c/Index.h.html#clang_disposeSourceRangeList:CXSourceRangeList*" class="nf">clang_disposeSourceRangeList</a>)</span>
+<span id="80L" class="Ln"><span class="p">}</span> <span class="c">// namespace synth</span></span>
+<span id="81L" class="Ln"></span>
+<span id="82L" class="Ln"><span class="cp">#</span><span class="cp">endif</span> <span class="cp">// SYNTH_CGWRAPPERS_HPP_INCLUDED</span></span>
+<span id="83L" class="Ln"></span>
+</pre></div>
+        <script src="../code.js"></script>
+    </body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>src/annotate.hpp</title>
+        <link rel="stylesheet" href="../codestyle-colorful.css">
+    </head>
+    <body>
+        <div class="highlight"><pre><span id="1L" class="Ln"><span class="cp">#</span><span class="cp">ifndef</span> <span class="cp">SYNTH_ANNOTATE_HPP_INCLUDED</span></span>
+<span id="2L" class="Ln"><span class="cp">#</span><span class="cp">define</span> <span class="cp">SYNTH_ANNOTATE_HPP_INCLUDED</span></span>
+<span id="3L" class="Ln"></span>
+<span id="4L" class="Ln"><a href="../lib-llvm/include/clang-c/Index.h.html"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">clang</span><span class="cpf">-</span><span class="cpf">c</span><span class="cpf">/</span><span class="cpf">Index</span><span class="cpf">.</span><span class="cpf">h</span><span class="cpf">></span></a></span>
+<span id="5L" class="Ln"></span>
+<span id="6L" class="Ln"><span class="kd">namespace</span> <span class="def decl nn" id="synth">synth</span> <span class="p">{</span></span>
+<span id="7L" class="Ln"></span>
+<span id="8L" class="Ln"><span class="kd">class</span> <a href="MultiTuProcessor.hpp.html#synth::MultiTuProcessor" class="decl nc" id="synth::MultiTuProcessor">MultiTuProcessor</a><span class="p">;</span></span>
+<span id="9L" class="Ln"></span>
+<span id="10L" class="Ln"><span class="kt">int</span> <a href="annotate.cpp.html#synth::processTu:CXIndex,synth::MultiTuProcessor&amp;,const-char*const*,int" class="decl nf" id="synth::processTu:CXIndex,synth::MultiTuProcessor&amp;,const-char*const*,int">processTu</a><span class="p">(</span></span>
+<span id="11L" class="Ln">    <a href="../lib-llvm/include/clang-c/Index.h.html#CXIndex" class="nc">CXIndex</a> <span class="def decl nv">cidx</span><span class="p">,</span> <a href="MultiTuProcessor.hpp.html#synth::MultiTuProcessor" class="nc">MultiTuProcessor</a><span class="p">&amp;</span> <span class="def decl nv">state</span><span class="p">,</span> <span class="kt">char</span> <span class="kd">const</span><span class="p">*</span> <span class="kd">const</span><span class="p">*</span> <span class="def decl nv">args</span><span class="p">,</span> <span class="kt">int</span> <span class="def decl nv">nargs</span><span class="p">)</span><span class="p">;</span></span>
+<span id="12L" class="Ln"></span>
+<span id="13L" class="Ln"><span class="p">}</span> <span class="c">// namespace synth</span></span>
+<span id="14L" class="Ln"></span>
+<span id="15L" class="Ln"><span class="cp">#</span><span class="cp">endif</span> <span class="cp">// SYNTH_ANNOTATE_HPP_INCLUDED</span></span>
+<span id="16L" class="Ln"></span>
+</pre></div>
+        <script src="../code.js"></script>
+    </body>
+</html>

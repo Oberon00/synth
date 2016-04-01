@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>src/highlight.hpp</title>
+        <link rel="stylesheet" href="../codestyle-colorful.css">
+    </head>
+    <body>
+        <div class="highlight"><pre><span id="1L" class="Ln"><span class="cp">#</span><span class="cp">ifndef</span> <span class="cp">SYNTH_HIGHLIGHT_HPP_INCLUDED</span></span>
+<span id="2L" class="Ln"><span class="cp">#</span><span class="cp">define</span> <span class="cp">SYNTH_HIGHLIGHT_HPP_INCLUDED</span></span>
+<span id="3L" class="Ln"></span>
+<span id="4L" class="Ln"><a href="output.hpp.html"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">"output.hpp"</span></a> <span class="cp">// For TokenAttribues</span></span>
+<span id="5L" class="Ln"></span>
+<span id="6L" class="Ln"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">boost</span><span class="cpf">/</span><span class="cpf">utility</span><span class="cpf">/</span><span class="cpf">string_ref</span><span class="cpf">.</span><span class="cpf">hpp</span><span class="cpf">></span></span>
+<span id="7L" class="Ln"><a href="../lib-llvm/include/clang-c/Index.h.html"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">&lt;</span><span class="cpf">clang</span><span class="cpf">-</span><span class="cpf">c</span><span class="cpf">/</span><span class="cpf">Index</span><span class="cpf">.</span><span class="cpf">h</span><span class="cpf">></span></a></span>
+<span id="8L" class="Ln"></span>
+<span id="9L" class="Ln"><span class="kd">namespace</span> <span class="def decl nn" id="synth">synth</span> <span class="p">{</span></span>
+<span id="10L" class="Ln"></span>
+<span id="11L" class="Ln"><a href="output.hpp.html#synth::TokenAttributes" class="nc">TokenAttributes</a> <a href="highlight.cpp.html#synth::getTokenAttributes:CXToken,CXCursor,boost::string_ref" class="decl nf" id="synth::getTokenAttributes:CXToken,CXCursor,boost::string_ref">getTokenAttributes</a><span class="p">(</span></span>
+<span id="12L" class="Ln">    <a href="../lib-llvm/include/clang-c/Index.h.html#4250L" class="nc">CXToken</a> <span class="def decl nv">tok</span><span class="p">,</span> <a href="../lib-llvm/include/clang-c/Index.h.html#2385L" class="nc">CXCursor</a> <span class="def decl nv">cur</span><span class="p">,</span> <span class="nn">boost</span><span class="p">::</span><span class="nc">string_ref</span> <span class="def decl nv">tokSpelling</span><span class="p">)</span><span class="p">;</span></span>
+<span id="13L" class="Ln"></span>
+<span id="14L" class="Ln"></span>
+<span id="15L" class="Ln"><span class="kt">bool</span> <a href="highlight.cpp.html#synth::isTypeAliasCursorKind:CXCursorKind" class="decl nf" id="synth::isTypeAliasCursorKind:CXCursorKind">isTypeAliasCursorKind</a><span class="p">(</span><a href="../lib-llvm/include/clang-c/Index.h.html#CXCursorKind" class="nc">CXCursorKind</a> <span class="def decl nv">k</span><span class="p">)</span><span class="p">;</span></span>
+<span id="16L" class="Ln"></span>
+<span id="17L" class="Ln"><span class="c">// This functions always return false for</span></span>
+<span id="18L" class="Ln"><span class="c">// MemberRef, DeclRefExpr, MemberRefExpr, UsingDeclaration, TemplateRef.</span></span>
+<span id="19L" class="Ln"><span class="kt">bool</span> <a href="highlight.cpp.html#synth::isTypeCursorKind:CXCursorKind" class="decl nf" id="synth::isTypeCursorKind:CXCursorKind">isTypeCursorKind</a><span class="p">(</span><a href="../lib-llvm/include/clang-c/Index.h.html#CXCursorKind" class="nc">CXCursorKind</a> <span class="def decl nv">k</span><span class="p">)</span><span class="p">;</span></span>
+<span id="20L" class="Ln"></span>
+<span id="21L" class="Ln"><span class="c">// Note that this only returns true for function declarations and</span></span>
+<span id="22L" class="Ln"><span class="c">// OverloadedDeclRef.</span></span>
+<span id="23L" class="Ln"><span class="kt">bool</span> <a href="highlight.cpp.html#synth::isFunctionCursorKind:CXCursorKind" class="decl nf" id="synth::isFunctionCursorKind:CXCursorKind">isFunctionCursorKind</a><span class="p">(</span><a href="../lib-llvm/include/clang-c/Index.h.html#CXCursorKind" class="nc">CXCursorKind</a> <span class="def decl nv">k</span><span class="p">)</span><span class="p">;</span></span>
+<span id="24L" class="Ln"></span>
+<span id="25L" class="Ln"><span class="p">}</span> <span class="c">// namespace synth</span></span>
+<span id="26L" class="Ln"></span>
+<span id="27L" class="Ln"><span class="cp">#</span><span class="cp">endif</span> <span class="cp">// SYNTH_HIGHLIGHT_HPP_INCLUDED</span></span>
+<span id="28L" class="Ln"></span>
+</pre></div>
+        <script src="../code.js"></script>
+    </body>
+</html>

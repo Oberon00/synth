@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+        <title>include/clang-c/BuildSystem.h</title>
+        <link rel="stylesheet" href="../../../codestyle-colorful.css">
+    </head>
+    <body>
+        <div class="highlight"><pre><span id="1L" class="Ln"><span class="c">/*==-- clang-c/BuildSystem.h - Utilities for use by build systems -*- C -*-===*\</span></span>
+<span id="2L" class="Ln"><span class="c">|*                                                                            *|</span></span>
+<span id="3L" class="Ln"><span class="c">|*                     The LLVM Compiler Infrastructure                       *|</span></span>
+<span id="4L" class="Ln"><span class="c">|*                                                                            *|</span></span>
+<span id="5L" class="Ln"><span class="c">|* This file is distributed under the University of Illinois Open Source      *|</span></span>
+<span id="6L" class="Ln"><span class="c">|* License. See LICENSE.TXT for details.                                      *|</span></span>
+<span id="7L" class="Ln"><span class="c">|*                                                                            *|</span></span>
+<span id="8L" class="Ln"><span class="c">|*===----------------------------------------------------------------------===*|</span></span>
+<span id="9L" class="Ln"><span class="c">|*                                                                            *|</span></span>
+<span id="10L" class="Ln"><span class="c">|* This header provides various utilities for use by build systems.           *|</span></span>
+<span id="11L" class="Ln"><span class="c">|*                                                                            *|</span></span>
+<span id="12L" class="Ln"><span class="c">\*===----------------------------------------------------------------------===*/</span></span>
+<span id="13L" class="Ln"></span>
+<span id="14L" class="Ln"><span class="cp">#</span><span class="cp">ifndef</span> <span class="cp">LLVM_CLANG_C_BUILDSYSTEM_H</span></span>
+<span id="15L" class="Ln"><span class="cp">#</span><span class="cp">define</span> <span class="cp">LLVM_CLANG_C_BUILDSYSTEM_H</span></span>
+<span id="16L" class="Ln"></span>
+<span id="17L" class="Ln"><a href="Platform.h.html"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">"clang-c/Platform.h"</span></a></span>
+<span id="18L" class="Ln"><a href="CXErrorCode.h.html"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">"clang-c/CXErrorCode.h"</span></a></span>
+<span id="19L" class="Ln"><a href="CXString.h.html"><span class="cp">#</span><span class="cp">include</span> <span class="cpf">"clang-c/CXString.h"</span></a></span>
+<span id="20L" class="Ln"></span>
+<span id="21L" class="Ln"><span class="cp">#</span><span class="cp">ifdef</span> <span class="cp">__cplusplus</span></span>
+<span id="22L" class="Ln"><span class="kd">extern</span> <span class="l">"C"</span> <span class="p">{</span></span>
+<span id="23L" class="Ln"><span class="cp">#</span><span class="cp">endif</span></span>
+<span id="24L" class="Ln"></span>
+<span id="25L" class="Ln"><span class="c">/**</span></span>
+<span id="26L" class="Ln"><span class="c"> * \defgroup BUILD_SYSTEM Build system utilities</span></span>
+<span id="27L" class="Ln"><span class="c"> * @{</span></span>
+<span id="28L" class="Ln"><span class="c"> */</span></span>
+<span id="29L" class="Ln"></span>
+<span id="30L" class="Ln"><span class="c">/**</span></span>
+<span id="31L" class="Ln"><span class="c"> * \brief Return the timestamp for use with Clang's</span></span>
+<span id="32L" class="Ln"><span class="c"> * \c -fbuild-session-timestamp= option.</span></span>
+<span id="33L" class="Ln"><span class="c"> */</span></span>
+<span id="34L" class="Ln"><a href="Platform.h.html#29L" class="cp">CINDEX_LINKAGE</a> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="decl nf" id="clang_getBuildSessionTimestamp">clang_getBuildSessionTimestamp</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="p">;</span></span>
+<span id="35L" class="Ln"></span>
+<span id="36L" class="Ln"><span class="c">/**</span></span>
+<span id="37L" class="Ln"><span class="c"> * \brief Object encapsulating information about overlaying virtual</span></span>
+<span id="38L" class="Ln"><span class="c"> * file/directories over the real file system.</span></span>
+<span id="39L" class="Ln"><span class="c"> */</span></span>
+<span id="40L" class="Ln"><span class="kd">typedef</span> <span class="kd">struct</span> <span class="decl nc" id="CXVirtualFileOverlayImpl">CXVirtualFileOverlayImpl</span> <span class="p">*</span><span class="def decl nc" id="CXVirtualFileOverlay">CXVirtualFileOverlay</span><span class="p">;</span></span>
+<span id="41L" class="Ln"></span>
+<span id="42L" class="Ln"><span class="c">/**</span></span>
+<span id="43L" class="Ln"><span class="c"> * \brief Create a \c CXVirtualFileOverlay object.</span></span>
+<span id="44L" class="Ln"><span class="c"> * Must be disposed with \c clang_VirtualFileOverlay_dispose().</span></span>
+<span id="45L" class="Ln"><span class="c"> *</span></span>
+<span id="46L" class="Ln"><span class="c"> * \param options is reserved, always pass 0.</span></span>
+<span id="47L" class="Ln"><span class="c"> */</span></span>
+<span id="48L" class="Ln"><a href="Platform.h.html#29L" class="cp">CINDEX_LINKAGE</a> <a href="#CXVirtualFileOverlay" class="nc">CXVirtualFileOverlay</a></span>
+<span id="49L" class="Ln"><span class="decl nf" id="clang_VirtualFileOverlay_create:unsigned-int">clang_VirtualFileOverlay_create</span><span class="p">(</span><span class="kt">unsigned</span> <span class="def decl nv">options</span><span class="p">)</span><span class="p">;</span></span>
+<span id="50L" class="Ln"></span>
+<span id="51L" class="Ln"><span class="c">/**</span></span>
+<span id="52L" class="Ln"><span class="c"> * \brief Map an absolute virtual file path to an absolute real one.</span></span>
+<span id="53L" class="Ln"><span class="c"> * The virtual path must be canonicalized (not contain "."/"..").</span></span>
+<span id="54L" class="Ln"><span class="c"> * \returns 0 for success, non-zero to indicate an error.</span></span>
+<span id="55L" class="Ln"><span class="c"> */</span></span>
+<span id="56L" class="Ln"><a href="Platform.h.html#29L" class="cp">CINDEX_LINKAGE</a> <span class="kd">enum</span> <a href="CXErrorCode.h.html#CXErrorCode" class="nc">CXErrorCode</a></span>
+<span id="57L" class="Ln"><span class="decl nf" id="clang_VirtualFileOverlay_addFileMapping:CXVirtualFileOverlay,const-char*,const-char*">clang_VirtualFileOverlay_addFileMapping</span><span class="p">(</span><a href="#CXVirtualFileOverlay" class="nc">CXVirtualFileOverlay</a><span class="def decl p">,</span></span>
+<span id="58L" class="Ln">                                        <span class="kd">const</span> <span class="kt">char</span> <span class="p">*</span><span class="def decl nv">virtualPath</span><span class="p">,</span></span>
+<span id="59L" class="Ln">                                        <span class="kd">const</span> <span class="kt">char</span> <span class="p">*</span><span class="def decl nv">realPath</span><span class="p">)</span><span class="p">;</span></span>
+<span id="60L" class="Ln"></span>
+<span id="61L" class="Ln"><span class="c">/**</span></span>
+<span id="62L" class="Ln"><span class="c"> * \brief Set the case sensitivity for the \c CXVirtualFileOverlay object.</span></span>
+<span id="63L" class="Ln"><span class="c"> * The \c CXVirtualFileOverlay object is case-sensitive by default, this</span></span>
+<span id="64L" class="Ln"><span class="c"> * option can be used to override the default.</span></span>
+<span id="65L" class="Ln"><span class="c"> * \returns 0 for success, non-zero to indicate an error.</span></span>
+<span id="66L" class="Ln"><span class="c"> */</span></span>
+<span id="67L" class="Ln"><a href="Platform.h.html#29L" class="cp">CINDEX_LINKAGE</a> <span class="kd">enum</span> <a href="CXErrorCode.h.html#CXErrorCode" class="nc">CXErrorCode</a></span>
+<span id="68L" class="Ln"><span class="decl nf" id="clang_VirtualFileOverlay_setCaseSensitivity:CXVirtualFileOverlay,int">clang_VirtualFileOverlay_setCaseSensitivity</span><span class="p">(</span><a href="#CXVirtualFileOverlay" class="nc">CXVirtualFileOverlay</a><span class="def decl p">,</span></span>
+<span id="69L" class="Ln">											<span class="kt">int</span> <span class="def decl nv">caseSensitive</span><span class="p">)</span><span class="p">;</span></span>
+<span id="70L" class="Ln"></span>
+<span id="71L" class="Ln"><span class="c">/**</span></span>
+<span id="72L" class="Ln"><span class="c"> * \brief Write out the \c CXVirtualFileOverlay object to a char buffer.</span></span>
+<span id="73L" class="Ln"><span class="c"> *</span></span>
+<span id="74L" class="Ln"><span class="c"> * \param options is reserved, always pass 0.</span></span>
+<span id="75L" class="Ln"><span class="c"> * \param out_buffer_ptr pointer to receive the buffer pointer, which should be</span></span>
+<span id="76L" class="Ln"><span class="c"> * disposed using \c clang_free().</span></span>
+<span id="77L" class="Ln"><span class="c"> * \param out_buffer_size pointer to receive the buffer size.</span></span>
+<span id="78L" class="Ln"><span class="c"> * \returns 0 for success, non-zero to indicate an error.</span></span>
+<span id="79L" class="Ln"><span class="c"> */</span></span>
+<span id="80L" class="Ln"><a href="Platform.h.html#29L" class="cp">CINDEX_LINKAGE</a> <span class="kd">enum</span> <a href="CXErrorCode.h.html#CXErrorCode" class="nc">CXErrorCode</a></span>
+<span id="81L" class="Ln"><span class="decl nf" id="clang_VirtualFileOverlay_writeToBuffer:CXVirtualFileOverlay,unsigned-int,char**,unsigned-int*">clang_VirtualFileOverlay_writeToBuffer</span><span class="p">(</span><a href="#CXVirtualFileOverlay" class="nc">CXVirtualFileOverlay</a><span class="def decl p">,</span> <span class="kt">unsigned</span> <span class="def decl nv">options</span><span class="p">,</span></span>
+<span id="82L" class="Ln">                                       <span class="kt">char</span> <span class="p">*</span><span class="p">*</span><span class="def decl nv">out_buffer_ptr</span><span class="p">,</span></span>
+<span id="83L" class="Ln">                                       <span class="kt">unsigned</span> <span class="p">*</span><span class="def decl nv">out_buffer_size</span><span class="p">)</span><span class="p">;</span></span>
+<span id="84L" class="Ln"></span>
+<span id="85L" class="Ln"><span class="c">/**</span></span>
+<span id="86L" class="Ln"><span class="c"> * \brief free memory allocated by libclang, such as the buffer returned by</span></span>
+<span id="87L" class="Ln"><span class="c"> * \c CXVirtualFileOverlay() or \c clang_ModuleMapDescriptor_writeToBuffer().</span></span>
+<span id="88L" class="Ln"><span class="c"> *</span></span>
+<span id="89L" class="Ln"><span class="c"> * \param buffer memory pointer to free.</span></span>
+<span id="90L" class="Ln"><span class="c"> */</span></span>
+<span id="91L" class="Ln"><a href="Platform.h.html#29L" class="cp">CINDEX_LINKAGE</a> <span class="kt">void</span> <span class="decl nf" id="clang_free:void*">clang_free</span><span class="p">(</span><span class="kt">void</span> <span class="p">*</span><span class="def decl nv">buffer</span><span class="p">)</span><span class="p">;</span></span>
+<span id="92L" class="Ln"></span>
+<span id="93L" class="Ln"><span class="c">/**</span></span>
+<span id="94L" class="Ln"><span class="c"> * \brief Dispose a \c CXVirtualFileOverlay object.</span></span>
+<span id="95L" class="Ln"><span class="c"> */</span></span>
+<span id="96L" class="Ln"><a href="Platform.h.html#29L" class="cp">CINDEX_LINKAGE</a> <span class="kt">void</span> <span class="decl nf" id="clang_VirtualFileOverlay_dispose:CXVirtualFileOverlay">clang_VirtualFileOverlay_dispose</span><span class="p">(</span><a href="#CXVirtualFileOverlay" class="nc">CXVirtualFileOverlay</a><span class="def decl p">)</span><span class="p">;</span></span>
+<span id="97L" class="Ln"></span>
+<span id="98L" class="Ln"><span class="c">/**</span></span>
+<span id="99L" class="Ln"><span class="c"> * \brief Object encapsulating information about a module.map file.</span></span>
+<span id="100L" class="Ln"><span class="c"> */</span></span>
+<span id="101L" class="Ln"><span class="kd">typedef</span> <span class="kd">struct</span> <span class="decl nc" id="CXModuleMapDescriptorImpl">CXModuleMapDescriptorImpl</span> <span class="p">*</span><span class="def decl nc" id="CXModuleMapDescriptor">CXModuleMapDescriptor</span><span class="p">;</span></span>
+<span id="102L" class="Ln"></span>
+<span id="103L" class="Ln"><span class="c">/**</span></span>
+<span id="104L" class="Ln"><span class="c"> * \brief Create a \c CXModuleMapDescriptor object.</span></span>
+<span id="105L" class="Ln"><span class="c"> * Must be disposed with \c clang_ModuleMapDescriptor_dispose().</span></span>
+<span id="106L" class="Ln"><span class="c"> *</span></span>
+<span id="107L" class="Ln"><span class="c"> * \param options is reserved, always pass 0.</span></span>
+<span id="108L" class="Ln"><span class="c"> */</span></span>
+<span id="109L" class="Ln"><a href="Platform.h.html#29L" class="cp">CINDEX_LINKAGE</a> <a href="#CXModuleMapDescriptor" class="nc">CXModuleMapDescriptor</a></span>
+<span id="110L" class="Ln"><span class="decl nf" id="clang_ModuleMapDescriptor_create:unsigned-int">clang_ModuleMapDescriptor_create</span><span class="p">(</span><span class="kt">unsigned</span> <span class="def decl nv">options</span><span class="p">)</span><span class="p">;</span></span>
+<span id="111L" class="Ln"></span>
+<span id="112L" class="Ln"><span class="c">/**</span></span>
+<span id="113L" class="Ln"><span class="c"> * \brief Sets the framework module name that the module.map describes.</span></span>
+<span id="114L" class="Ln"><span class="c"> * \returns 0 for success, non-zero to indicate an error.</span></span>
+<span id="115L" class="Ln"><span class="c"> */</span></span>
+<span id="116L" class="Ln"><a href="Platform.h.html#29L" class="cp">CINDEX_LINKAGE</a> <span class="kd">enum</span> <a href="CXErrorCode.h.html#CXErrorCode" class="nc">CXErrorCode</a></span>
+<span id="117L" class="Ln"><span class="decl nf" id="clang_ModuleMapDescriptor_setFrameworkModuleName:CXModuleMapDescriptor,const-char*">clang_ModuleMapDescriptor_setFrameworkModuleName</span><span class="p">(</span><a href="#CXModuleMapDescriptor" class="nc">CXModuleMapDescriptor</a><span class="def decl p">,</span></span>
+<span id="118L" class="Ln">                                                 <span class="kd">const</span> <span class="kt">char</span> <span class="p">*</span><span class="def decl nv">name</span><span class="p">)</span><span class="p">;</span></span>
+<span id="119L" class="Ln"></span>
+<span id="120L" class="Ln"><span class="c">/**</span></span>
+<span id="121L" class="Ln"><span class="c"> * \brief Sets the umbrealla header name that the module.map describes.</span></span>
+<span id="122L" class="Ln"><span class="c"> * \returns 0 for success, non-zero to indicate an error.</span></span>
+<span id="123L" class="Ln"><span class="c"> */</span></span>
+<span id="124L" class="Ln"><a href="Platform.h.html#29L" class="cp">CINDEX_LINKAGE</a> <span class="kd">enum</span> <a href="CXErrorCode.h.html#CXErrorCode" class="nc">CXErrorCode</a></span>
+<span id="125L" class="Ln"><span class="decl nf" id="clang_ModuleMapDescriptor_setUmbrellaHeader:CXModuleMapDescriptor,const-char*">clang_ModuleMapDescriptor_setUmbrellaHeader</span><span class="p">(</span><a href="#CXModuleMapDescriptor" class="nc">CXModuleMapDescriptor</a><span class="def decl p">,</span></span>
+<span id="126L" class="Ln">                                            <span class="kd">const</span> <span class="kt">char</span> <span class="p">*</span><span class="def decl nv">name</span><span class="p">)</span><span class="p">;</span></span>
+<span id="127L" class="Ln"></span>
+<span id="128L" class="Ln"><span class="c">/**</span></span>
+<span id="129L" class="Ln"><span class="c"> * \brief Write out the \c CXModuleMapDescriptor object to a char buffer.</span></span>
+<span id="130L" class="Ln"><span class="c"> *</span></span>
+<span id="131L" class="Ln"><span class="c"> * \param options is reserved, always pass 0.</span></span>
+<span id="132L" class="Ln"><span class="c"> * \param out_buffer_ptr pointer to receive the buffer pointer, which should be</span></span>
+<span id="133L" class="Ln"><span class="c"> * disposed using \c clang_free().</span></span>
+<span id="134L" class="Ln"><span class="c"> * \param out_buffer_size pointer to receive the buffer size.</span></span>
+<span id="135L" class="Ln"><span class="c"> * \returns 0 for success, non-zero to indicate an error.</span></span>
+<span id="136L" class="Ln"><span class="c"> */</span></span>
+<span id="137L" class="Ln"><a href="Platform.h.html#29L" class="cp">CINDEX_LINKAGE</a> <span class="kd">enum</span> <a href="CXErrorCode.h.html#CXErrorCode" class="nc">CXErrorCode</a></span>
+<span id="138L" class="Ln"><span class="decl nf" id="clang_ModuleMapDescriptor_writeToBuffer:CXModuleMapDescriptor,unsigned-int,char**,unsigned-int*">clang_ModuleMapDescriptor_writeToBuffer</span><span class="p">(</span><a href="#CXModuleMapDescriptor" class="nc">CXModuleMapDescriptor</a><span class="def decl p">,</span> <span class="kt">unsigned</span> <span class="def decl nv">options</span><span class="p">,</span></span>
+<span id="139L" class="Ln">                                       <span class="kt">char</span> <span class="p">*</span><span class="p">*</span><span class="def decl nv">out_buffer_ptr</span><span class="p">,</span></span>
+<span id="140L" class="Ln">                                       <span class="kt">unsigned</span> <span class="p">*</span><span class="def decl nv">out_buffer_size</span><span class="p">)</span><span class="p">;</span></span>
+<span id="141L" class="Ln"></span>
+<span id="142L" class="Ln"><span class="c">/**</span></span>
+<span id="143L" class="Ln"><span class="c"> * \brief Dispose a \c CXModuleMapDescriptor object.</span></span>
+<span id="144L" class="Ln"><span class="c"> */</span></span>
+<span id="145L" class="Ln"><a href="Platform.h.html#29L" class="cp">CINDEX_LINKAGE</a> <span class="kt">void</span> <span class="decl nf" id="clang_ModuleMapDescriptor_dispose:CXModuleMapDescriptor">clang_ModuleMapDescriptor_dispose</span><span class="p">(</span><a href="#CXModuleMapDescriptor" class="nc">CXModuleMapDescriptor</a><span class="def decl p">)</span><span class="p">;</span></span>
+<span id="146L" class="Ln"></span>
+<span id="147L" class="Ln"><span class="c">/**</span></span>
+<span id="148L" class="Ln"><span class="c"> * @}</span></span>
+<span id="149L" class="Ln"><span class="c"> */</span></span>
+<span id="150L" class="Ln"></span>
+<span id="151L" class="Ln"><span class="cp">#</span><span class="cp">ifdef</span> <span class="cp">__cplusplus</span></span>
+<span id="152L" class="Ln"><span class="p">}</span></span>
+<span id="153L" class="Ln"><span class="cp">#</span><span class="cp">endif</span></span>
+<span id="154L" class="Ln"></span>
+<span id="155L" class="Ln"><span class="cp">#</span><span class="cp">endif</span> <span class="cp">/* CLANG_C_BUILD_SYSTEM_H */</span></span>
+<span id="156L" class="Ln"></span>
+<span id="157L" class="Ln"></span>
+</pre></div>
+        <script src="../../../code.js"></script>
+    </body>
+</html>

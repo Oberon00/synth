@@ -1,0 +1,19 @@
+@import 'base.css';
+
+#chooserHolder {
+    float: right;
+}
+
+.highlight a {
+    color: inherit;
+}
+
+.highlight .Ln:target {
+    /* color below */
+    display: inline-block;
+    width: 100%;
+}
+
+.disabled-code {
+    opacity: 0.5;
+}
