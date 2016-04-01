@@ -78,5 +78,6 @@ find_library(LLVM_LIBRARIES
     NAMES clang)
 
 find_package(Boost REQUIRED filesystem system)
+find_package(Threads REQUIRED)
 include_directories(SYSTEM ${LIBCLANG_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
 add_subdirectory("src")

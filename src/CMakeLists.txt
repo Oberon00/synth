@@ -27,7 +27,10 @@ set(synth_SRCS
 set(CMAKE_DEBUG_POSTFIX "-d")
 
 add_executable(synth ${synth_SRCS} ${synth_HDRS})
-target_link_libraries(synth ${LLVM_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(synth
+    ${LLVM_LIBRARIES}
+    ${Boost_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT})
 #if(THREADS_HAVE_PTHREAD_ARG)
 #  target_compile_options(PUBLIC synth "-pthread")
 #endif()
