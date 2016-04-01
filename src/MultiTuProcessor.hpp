@@ -12,6 +12,8 @@
 #include <boost/filesystem/path.hpp>
 #include "output.hpp"
 #include "FileIdSupport.hpp"
+#include <mutex>
+#include <atomic>
 
 namespace synth {
 
@@ -25,7 +27,7 @@ struct MissingDef {
 };
 
 struct FileEntry {
-    bool processed;
+    std::atomic_flag processed;
     HighlightedFile hlFile;
 };
 
@@ -33,10 +35,7 @@ using PathMap = std::vector<std::pair<fs::path, fs::path>>;
 
 class MultiTuProcessor {
 public:
-    static MultiTuProcessor forRootdirs(PathMap const& dirs)
-    {
-        return MultiTuProcessor(dirs);
-    }
+    explicit MultiTuProcessor(PathMap const& rootdir_);
 
     bool isFileIncluded(fs::path const& p) const;
 
@@ -47,6 +46,7 @@ public:
 
     void registerDef(std::string&& usr, SourceLocation&& def)
     {
+        std::lock_guard<std::mutex> lock(m_mut);
         m_defs.insert({usr, std::move(def)});
     }
 
@@ -55,6 +55,7 @@ public:
         std::size_t markupIdx,
         std::string&& dstUsr)
     {
+        std::lock_guard<std::mutex> lock(m_mut);
         m_missingDefs[dstUsr].push_back({&file, markupIdx});
     }
 
@@ -64,8 +65,6 @@ public:
 
 private:
     using FileEntryMap = std::unordered_map<CXFileUniqueID, FileEntry>;
-
-    explicit MultiTuProcessor(PathMap const& rootdir_);
 
     Markup& markupFromMissingDef(MissingDef const& def);
 
@@ -86,6 +85,8 @@ private:
 
     // Common prefix of all keys in m_dirs
     fs::path m_rootInDir;
+
+    std::mutex m_mut;
 };
 
 } // namespace synth

@@ -74,9 +74,8 @@ PathMap::value_type const* MultiTuProcessor::getFileMapping(
 HighlightedFile* MultiTuProcessor::prepareToProcess(CXFile f)
 {
     FileEntry* fentry = obtainFileEntry(f);
-    if (!fentry || fentry->processed)
+    if (!fentry || fentry->processed.test_and_set())
         return nullptr;
-    fentry->processed = true;
     return &fentry->hlFile;
 }
 
@@ -92,6 +91,8 @@ FileEntry* MultiTuProcessor::obtainFileEntry(CXFile f)
     CXFileUniqueID fuid;
     if (!f || clang_getFileUniqueID(f, &fuid) != 0)
         return nullptr;
+
+    std::lock_guard<std::mutex> lock(m_mut);
     auto it = m_processedFiles.find(fuid);
     if (it != m_processedFiles.end())
         return &it->second;
@@ -102,14 +103,14 @@ FileEntry* MultiTuProcessor::obtainFileEntry(CXFile f)
     if (!mapping)
         return nullptr;
     fname = fs::relative(std::move(fname), mapping->first);
-    FileEntry entry = {
-        /*processed=*/ false,
-        /*hlFile=*/ {
-            /*fname=*/ fname,
-            /*inOutDir=*/ mapping,
-            /*markups=*/ {}
-        }};
-    return &m_processedFiles.insert({fuid, std::move(entry)}).first->second;
+    FileEntry& e = m_processedFiles.emplace(
+            std::piecewise_construct,
+            std::forward_as_tuple(std::move(fuid)),
+            std::forward_as_tuple())
+        .first->second;
+    e.hlFile.fname = std::move(fname);
+    e.hlFile.inOutDir = mapping;
+    return &e;
 }
 
 void MultiTuProcessor::resolveMissingRefs()

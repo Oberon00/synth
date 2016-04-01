@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <cstring>
+#include <thread>
 
 using namespace synth;
 
@@ -33,6 +34,20 @@ CmdLineArgs CmdLineArgs::parse(int argc, char const* const* argv)
             r.clangArgs.push_back(getOptVal(argv + i++));
         } else if (!std::strcmp(argv[i], "-t")) {
              getOptVal(argv + i++, r.templateFile);
+        } else if (!std::strcmp(argv[i], "-j")) {
+            if (r.nThreads != 0)
+                throw std::runtime_error("Duplicate option -j.");
+            char const* nStr = getOptVal(argv + i++);
+            int n;
+            try {
+                n = std::stoi(nStr);
+            } catch (std::exception const& e) {
+                throw std::runtime_error(
+                    std::string("Bad integer for -j: ") + e.what());
+            }
+            if (n < 0)
+                throw std::runtime_error("Value for -j must not be negative");
+            r.nThreads = static_cast<unsigned>(n);
         } else if (!std::strcmp(argv[i], "-o")) {
             if (r.inOutDirs.empty()) {
                 throw std::runtime_error(
@@ -59,6 +74,8 @@ CmdLineArgs CmdLineArgs::parse(int argc, char const* const* argv)
     if (i != argc)
         throw std::runtime_error("Superfluous commandline arguments.");
 
+    if (r.nThreads == 0)
+        r.nThreads = std::thread::hardware_concurrency();
     for (auto& dir : r.inOutDirs) {
         if (!dir.second)
             dir.second = ".";

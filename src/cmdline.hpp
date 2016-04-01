@@ -18,6 +18,8 @@ struct CmdLineArgs {
     char const* compilationDbDir;
 
     static CmdLineArgs parse(int argc, char const* const* argv);
+
+    unsigned nThreads;
 };
 
 } // namespace synth

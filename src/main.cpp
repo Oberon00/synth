@@ -9,6 +9,8 @@
 #include <iomanip>
 #include <sstream>
 #include <fstream>
+#include <thread>
+#include <atomic>
 #include <boost/filesystem.hpp>
 
 using namespace synth;
@@ -51,6 +53,38 @@ static std::vector<CgStr> getClArgs(CXCompileCommand cmd)
     return result;
 }
 
+static void processCompileCommand(
+    CXCompileCommand cmd,
+    CXIndex cidx,
+    std::vector<char const*> extraArgs,
+    MultiTuProcessor& state,
+    std::mutex& outputMut,
+    float pct)
+{
+    CgStr file(clang_CompileCommand_getFilename(cmd));
+    if (!file.empty() && !state.isFileIncluded(file.get()))
+        return;
+
+    {
+        std::lock_guard<std::mutex> lock(outputMut);
+
+        std::clog.flags(std::clog.flags() | std::ios::fixed);
+        std::clog.precision(2);
+        std::clog << '[' << std::setw(6) << pct << "%]: " << file << "...\n";
+    }
+
+    std::vector<CgStr> clArgsHandles = getClArgs(cmd);
+    std::vector<char const*> clArgs;
+    clArgs.reserve(clArgsHandles.size() + extraArgs.size());
+    for (CgStr const& s : clArgsHandles)
+        clArgs.push_back(s.get());
+    clArgs.insert(clArgs.end(), extraArgs.begin(), extraArgs.end());
+    //CgStr dir = clang_CompileCommand_getDirectory(cmd);
+    //if (!dir.empty())
+    //    fs::current_path(dir.get());
+    processTu(cidx, state, clArgs.data(), static_cast<int>(clArgs.size()));
+}
+
 // Adapted from
 // http://insanecoding.blogspot.co.at/2011/11/how-to-read-in-file-in-c.html
 static std::string getFileContents(char const* fname)
@@ -61,6 +95,7 @@ static std::string getFileContents(char const* fname)
     contents << in.rdbuf();
     return std::move(contents).str();
 }
+
 
 static int executeCmdLine(CmdLineArgs const& args)
 {
@@ -80,7 +115,7 @@ static int executeCmdLine(CmdLineArgs const& args)
             /*excludeDeclarationsFromPCH:*/ true,
             /*displayDiagnostics:*/ true));
 
-    auto state = MultiTuProcessor::forRootdirs(
+    MultiTuProcessor state(
         PathMap(args.inOutDirs.begin(), args.inOutDirs.end()));
 
     if (args.compilationDbDir) {
@@ -101,38 +136,45 @@ static int executeCmdLine(CmdLineArgs const& args)
             return EXIT_SUCCESS;
         }
 
-        InitialPathResetter pathResetter;
+        //InitialPathResetter pathResetter;
 
-        for (unsigned i = 0; i < nCmds; ++i) {
-            CXCompileCommand cmd = clang_CompileCommands_getCommand(
-                cmds.get(), i);
+        std::mutex outputMut;
 
-            CgStr file(clang_CompileCommand_getFilename(cmd));
-            if (!file.empty() && !state.isFileIncluded(file.get()))
-                continue;
+        // It seems [1] that during creation of the first translation,
+        // no others may be created or data races occur inside libclang.
+        // [1]: Detected by clangs TSan.
+        processCompileCommand(
+            clang_CompileCommands_getCommand(cmds.get(), 0),
+            hcidx.get(),
+            args.clangArgs,
+            state,
+            outputMut,
+            0);
 
-            std::clog.flags(std::clog.flags() | std::ios::fixed);
-            std::clog.precision(2);
-            std::clog
-                << '[' << std::setw(6) << i / static_cast<float>(nCmds) * 100 << "%]: "
-                << file << "...\n";
+        std::atomic_uint sharedCmdIdx(1u);
+        std::vector<std::thread> threads;
+        threads.reserve(args.nThreads - 1);
+        std::clog << "Using " << args.nThreads << " threads.\n";
+        auto worker = [&]() {
+            for (;;) {
+                unsigned cmdIdx = sharedCmdIdx++;
+                if (cmdIdx >= nCmds)
+                    return;
 
-            std::vector<CgStr> clArgsHandles = getClArgs(cmd);
-            std::vector<char const*> clArgs;
-            clArgs.reserve(clArgsHandles.size() + args.clangArgs.size());
-            for (CgStr const& s : clArgsHandles)
-                clArgs.push_back(s.get());
-            clArgs.insert(
-                clArgs.end(), args.clangArgs.begin(), args.clangArgs.end());
-            CgStr dir = clang_CompileCommand_getDirectory(cmd);
-            if (!dir.empty())
-                fs::current_path(dir.get());
-            processTu(
-                hcidx.get(),
-                state,
-                clArgs.data(),
-                static_cast<int>(clArgs.size()));
-        }
+                processCompileCommand(
+                    clang_CompileCommands_getCommand(cmds.get(), cmdIdx),
+                    hcidx.get(),
+                    args.clangArgs,
+                    state,
+                    outputMut,
+                    static_cast<float>(cmdIdx) / nCmds * 100);
+            }
+        };
+        for (unsigned i = 0; i < args.nThreads - 1; ++i)
+            threads.emplace_back(worker);
+        worker();
+        for (auto& th : threads)
+            th.join();
     } else {
         int r = synth::processTu(
             hcidx.get(),
