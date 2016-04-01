@@ -39,6 +39,10 @@ else()
         #add_definitions("-Wno-unused-parameter")
         #add_definitions("-Wno-documentation-unknown-command")
         #add_definitions("-Wno-shadow")
+
+        set(CMAKE_CXX_FLAGS_DEBUG
+            "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=thread,undefined")
+
     elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         add_definitions("-Wall -Wextra -pedantic")
         add_definitions("-Winit-self -Woverloaded-virtual")
@@ -61,42 +65,16 @@ else()
     endif()
 endif()
 
-set (LLVM_LIB_DIR "/usr/lib/llvm-3.8/lib/")
-
-#find_path(LIBLLVM_INCLUDE_DIR
-#    "Support/CommandLine.h"
-#    PATHS "/usr/include/llvm-3.8/llvm/")
-#find_path(LIBCLANG_INCLUDE_DIR
-#    "clang/Tooling/Tooling.h"
-#    PATHS "/usr/lib/llvm-3.8/include/")
-#
-#set (llvm_lib_names
-#    clangAST
-#    clangBasic
-#    clangDriver
-#    clangFrontend
-#    clangSerialization
-#    clangRewriteFrontend
-#    clangStaticAnalyzerFrontend
-#    clangTooling
-#    LLVMOption
-#    LLVMSupport)
-#
-#foreach(libname ${llvm_lib_names})
-#    find_library(${libname}_libpath
-#        PATHS ${LLVM_LIB_DIR}
-#        NAMES ${libname})
-#    message(STATUS "${libname} -> ${${libname}_libpath}")
-#    list(APPEND LLVM_LIBRARIES ${${libname}_libpath})
-#endforeach()
-
+set (LLVM_VERSION 3.9 CACHE STRING "Version of LLVM/Clang libs to use.")
 
 find_path(LIBCLANG_INCLUDE_DIR
     "clang-c/Index.h"
-    PATHS "/usr/include/llvm-3.8/llvm/")
+    PATHS
+        "/usr/lib/llvm-${LLVM_VERSION}/include/"
+        "/usr/include/llvm-${LLVM_VERSION}/llvm/")
 
 find_library(LLVM_LIBRARIES
-    PATHS ${LLVM_LIB_DIR}
+    PATHS "/usr/lib/llvm-${LLVM_VERSION}/lib/"
     NAMES clang)
 
 find_package(Boost REQUIRED filesystem system)
