@@ -10,8 +10,9 @@
 #include <sstream>
 #include <fstream>
 #include <thread>
-#include <atomic>
+#include <condition_variable>
 #include <boost/filesystem.hpp>
+#include <boost/io/ios_state.hpp>
 
 using namespace synth;
 
@@ -41,6 +42,54 @@ struct InitialPathResetter {
     }
 };
 
+struct ThreadSharedState {
+    CXIndex cidx;
+    MultiTuProcessor& multiTuProcessor;
+    std::mutex workingDirMut;
+    std::mutex outputMut;
+    std::condition_variable workingDirChangedOrFree;
+    unsigned nWorkingDirUsers;
+    std::atomic_bool cancel;
+};
+
+class UIntRef {
+public:
+    UIntRef(
+        unsigned& refd, std::condition_variable& zeroSignal, std::mutex& mut)
+        : m_refd(refd)
+        , m_zeroSignal(zeroSignal)
+        , m_mut(mut)
+        , m_acquired(false)
+    { }
+
+    // Note: The referenced unsigned must be syncronized by the caller.
+    void acquire()
+    {
+        assert(!m_acquired);
+        ++m_refd;
+        m_acquired = true;
+    }
+
+    ~UIntRef()
+    {
+        if (m_acquired) {
+            bool zeroReached;
+            {
+                std::lock_guard<std::mutex> lock(m_mut);
+                zeroReached = --m_refd == 0;
+            }
+            if (zeroReached)
+                m_zeroSignal.notify_all();
+        }
+    }
+
+private:
+    unsigned& m_refd;
+    std::condition_variable& m_zeroSignal;
+    std::mutex& m_mut;
+    bool m_acquired;
+};
+
 } // anonyomous namespace
 
 static std::vector<CgStr> getClArgs(CXCompileCommand cmd)
@@ -53,25 +102,15 @@ static std::vector<CgStr> getClArgs(CXCompileCommand cmd)
     return result;
 }
 
-static void processCompileCommand(
+static bool processCompileCommand(
     CXCompileCommand cmd,
-    CXIndex cidx,
     std::vector<char const*> extraArgs,
-    MultiTuProcessor& state,
-    std::mutex& outputMut,
-    float pct)
+    float pct,
+    ThreadSharedState& state)
 {
     CgStr file(clang_CompileCommand_getFilename(cmd));
-    if (!file.empty() && !state.isFileIncluded(file.get()))
-        return;
-
-    {
-        std::lock_guard<std::mutex> lock(outputMut);
-
-        std::clog.flags(std::clog.flags() | std::ios::fixed);
-        std::clog.precision(2);
-        std::clog << '[' << std::setw(6) << pct << "%]: " << file << "...\n";
-    }
+    if (!file.empty() && !state.multiTuProcessor.isFileIncluded(file.get()))
+        return false;
 
     std::vector<CgStr> clArgsHandles = getClArgs(cmd);
     std::vector<char const*> clArgs;
@@ -79,10 +118,52 @@ static void processCompileCommand(
     for (CgStr const& s : clArgsHandles)
         clArgs.push_back(s.get());
     clArgs.insert(clArgs.end(), extraArgs.begin(), extraArgs.end());
-    //CgStr dir = clang_CompileCommand_getDirectory(cmd);
-    //if (!dir.empty())
-    //    fs::current_path(dir.get());
-    processTu(cidx, state, clArgs.data(), static_cast<int>(clArgs.size()));
+    CgStr dirStr = clang_CompileCommand_getDirectory(cmd);
+    UIntRef dirRef(
+        state.nWorkingDirUsers,
+        state.workingDirChangedOrFree,
+        state.workingDirMut);
+
+    bool dirChanged = false;
+    if (!dirStr.empty()) {
+        fs::path dir = std::move(dirStr).gets();
+        bool dirOk;
+        std::unique_lock<std::mutex> lock(state.workingDirMut);
+        state.workingDirChangedOrFree.wait(lock, [&]() {
+            if (state.cancel)
+                return true;
+            dirOk = fs::current_path() == dir;
+            return dirOk || state.nWorkingDirUsers == 0;
+        });
+        if (state.cancel)
+            return false;
+        dirRef.acquire();
+        if (!dirOk) {
+            fs::current_path(dir);
+            dirChanged = true;
+        }
+    } else {
+        std::lock_guard<std::mutex> lock(state.workingDirMut);
+        dirRef.acquire();
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(state.outputMut);
+
+        if (dirChanged)
+            std::clog << "Entered directory " << dirStr.get() << '\n';
+        boost::io::ios_all_saver saver(std::clog);
+        std::clog.flags(std::clog.flags() | std::ios::fixed);
+        std::clog.precision(2);
+        std::clog << '[' << std::setw(6) << pct << "%]: " << file << "...\n";
+    }
+
+
+    return processTu(
+        state.cidx,
+        state.multiTuProcessor,
+        clArgs.data(),
+        static_cast<int>(clArgs.size())) == EXIT_SUCCESS;
 }
 
 // Adapted from
@@ -136,45 +217,65 @@ static int executeCmdLine(CmdLineArgs const& args)
             return EXIT_SUCCESS;
         }
 
-        //InitialPathResetter pathResetter;
-
-        std::mutex outputMut;
+        InitialPathResetter pathResetter;
+        ThreadSharedState tstate {
+            /*cidx=*/ hcidx.get(),
+            /*multiTuProcessor=*/ state,
+            /*workindDirMut=*/ {},
+            /*outputMut=*/ {},
+            /*workingDirChangedOrFree=*/ {},
+            /*nWorkingDirUsers=*/ 0u,
+            /*cancel=*/ {false}};
 
         // It seems [1] that during creation of the first translation,
         // no others may be created or data races occur inside libclang.
         // [1]: Detected by clangs TSan.
-        processCompileCommand(
-            clang_CompileCommands_getCommand(cmds.get(), 0),
-            hcidx.get(),
+        unsigned idx = 0;
+        while (!processCompileCommand(
+            clang_CompileCommands_getCommand(cmds.get(), idx++),
             args.clangArgs,
-            state,
-            outputMut,
-            0);
+            0,
+            tstate)
+        ) {
+            assert(tstate.nWorkingDirUsers == 0);
+        }
 
-        std::atomic_uint sharedCmdIdx(1u);
+        std::atomic_uint sharedCmdIdx(idx);
         std::vector<std::thread> threads;
         threads.reserve(args.nThreads - 1);
         std::clog << "Using " << args.nThreads << " threads.\n";
-        auto worker = [&]() {
-            for (;;) {
+        auto const worker = [&]() {
+            while (!tstate.cancel) {
                 unsigned cmdIdx = sharedCmdIdx++;
                 if (cmdIdx >= nCmds)
                     return;
 
                 processCompileCommand(
                     clang_CompileCommands_getCommand(cmds.get(), cmdIdx),
-                    hcidx.get(),
                     args.clangArgs,
-                    state,
-                    outputMut,
-                    static_cast<float>(cmdIdx) / nCmds * 100);
+                    static_cast<float>(cmdIdx) / nCmds * 100,
+                    tstate);
             }
         };
-        for (unsigned i = 0; i < args.nThreads - 1; ++i)
-            threads.emplace_back(worker);
-        worker();
+        try {
+            for (unsigned i = 0; i < args.nThreads - 1; ++i)
+                threads.emplace_back(worker);
+            worker();
+        } catch (...) {
+            tstate.cancel = true; // Do before locking to reduce wait time.
+            {
+                std::lock_guard<std::mutex> lock(tstate.workingDirMut);
+                tstate.cancel = true; // Repeat for condition variable.
+            }
+            tstate.workingDirChangedOrFree.notify_all();
+            for (auto& th : threads)
+                th.join();
+            assert(tstate.nWorkingDirUsers == 0);
+            throw;
+        }
         for (auto& th : threads)
             th.join();
+        assert(tstate.nWorkingDirUsers == 0);
     } else {
         int r = synth::processTu(
             hcidx.get(),
