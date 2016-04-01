@@ -1,6 +1,6 @@
-# Part of the synth tool -- Copyright (c) Christian Neumüller 2015
-# This file is subject to the terms of the BSD 2-Clause License.
-# See LICENSE.txt or http://opensource.org/licenses/BSD-2-Clause
+# Part of the synth tool -- Copyright (c) Christian Neumüller 2016
+# This file is subject to the terms of the MIT License.
+# See LICENSE.txt or http://opensource.org/licenses/MIT
 
 cmake_minimum_required(VERSION 2.8)
 project(synth)

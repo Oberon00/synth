@@ -91,5 +91,9 @@ where only declarations and definitions are bold.
    synth.sln``. If you have a not too ancient CMake you can just use
    ``cmake --build .``.
 
+## License
+
+This project is licensed under the MIT license. See [LICENSE.txt](LICENSE.txt)
+
 
 [libclang]: http://clang.llvm.org/doxygen/group__CINDEX.html
