@@ -42,7 +42,7 @@ static void dumpTokens(CXCursor root, bool annotate)
     clang_getFileLocation(
         clang_getRangeStart(rng), &f, nullptr, nullptr, nullptr);
 
-    CgTokensCleanup tokCleanup(tokens, numTokens, tu);
+    CgTokensHandle tokCleanup(tokens, numTokens, tu);
 
     if (numTokens > 0) {
         if (annotate) {

@@ -12,17 +12,49 @@
 
 namespace synth {
 
-class CgTokensCleanup : private boost::noncopyable {
+class CgTokensHandle {
 public:
-    CgTokensCleanup(CXToken* data, unsigned ntokens, CXTranslationUnit tu_)
+    CgTokensHandle(CXToken* data, unsigned ntokens, CXTranslationUnit tu_)
         : m_data(data), m_ntokens(ntokens), m_tu(tu_)
     {}
 
-    ~CgTokensCleanup() {
-        clang_disposeTokens(m_tu, m_data, m_ntokens);
+    ~CgTokensHandle() { destroy(); }
+
+    CgTokensHandle(CgTokensHandle&& other)
+        : m_data(other.m_data)
+        , m_ntokens(other.m_ntokens)
+        , m_tu(other.m_tu)
+    {
+        other.release();
     }
 
+    CgTokensHandle& operator= (CgTokensHandle&& other)
+    {
+        destroy();
+        m_data = other.m_data;
+        m_ntokens = other.m_ntokens;
+        m_tu = other.m_tu;
+        other.release();
+        return *this;
+    }
+
+    CXTranslationUnit tu() const { return m_tu; }
+    unsigned size() const { return m_ntokens; }
+    CXToken* tokens() { return m_data; }
+
 private:
+    void destroy()
+    {
+        if (m_data)
+            clang_disposeTokens(m_tu, m_data, m_ntokens);
+    }
+
+    void release()
+    {
+        m_ntokens = 0;
+        m_data = nullptr;
+    }
+
     CXToken* m_data;
     unsigned m_ntokens;
     CXTranslationUnit m_tu;

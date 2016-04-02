@@ -386,7 +386,7 @@ static void processFile(
     CXToken* tokens;
     unsigned numTokens;
     clang_tokenize(tu, clang_getRange(beg, end), &tokens, &numTokens);
-    CgTokensCleanup tokCleanup(tokens, numTokens, tu);
+    CgTokensHandle tokCleanup(tokens, numTokens, tu);
 
     if (numTokens > 0) {
         FileState state {*hlFile, multiTuProcessor, false};
