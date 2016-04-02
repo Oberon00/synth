@@ -8,6 +8,7 @@ set(libsynth_HDRS
     "MultiTuProcessor.hpp"
     "SimpleTemplate.hpp"
     "cgWrappers.hpp"
+    "highlight.hpp"
     "config.hpp"
     "output.hpp"
 )
@@ -17,6 +18,7 @@ set(libsynth_SRCS
     "SimpleTemplate.cpp"
     "annotate.cpp"
     "debug.cpp"
+    "highlight.cpp"
     "output.cpp"
     "xref.cpp"
 )
