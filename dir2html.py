@@ -34,17 +34,27 @@ def ext(fname):
 def write_dir_listing(indirname, outfname):
     lines = []
     outdirname = path.dirname(outfname)
+    try:
+        os.remove(outfname) # Avoid self-listing.
+    except FileNotFoundError:
+        pass
 
     for root, dirs, files in os.walk(indirname):
+        def file_filter(f):
+            stemName, extName = path.splitext(f)
+            if extName != ".html":
+                return False
+            if ext(stemName)[1:].lower() not in CEXTS:
+                return False
+            return True
+
+        files = list(filter(file_filter, files))
         if not files:
             continue
         files.sort()
         root = path.relpath(root, outdirname)
-        lines.append('<li class="dir">{0}:<ul>'.format(root))
+        lines.append('<li class="dir"><span class="dirname">{0}</span><ul>'.format(root))
         for file in files:
-            stemName = stem(file)
-            if ext(stemName)[1:].lower() not in CEXTS:
-                continue
             lines.append('<li class="file"><a href="{0}">{1}</a></li>'
                     .format(escape(path.join(root, file)), escape(stem(file))))
         lines.append("</ul></li>")

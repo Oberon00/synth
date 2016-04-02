@@ -14,13 +14,13 @@ ul {
     list-style-type: none;
 }
 
-.dir {
+.dirname {
     font-weight: bold;
     margin-top: 2em;
 }
 
-.dir > * {
-    font-weight: normal;
+.dirname:after {
+    content: ":";
 }
 
 @media screen and (min-width: 500px), print {
