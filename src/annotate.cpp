@@ -5,8 +5,11 @@
 #include "cgWrappers.hpp"
 #include "config.hpp"
 #include "debug.hpp"
+#include "fileIdSupport.hpp"
 #include "output.hpp"
 #include "xref.hpp"
+
+#include <boost/assert.hpp>
 
 #include <climits>
 #include <cstring>
@@ -44,6 +47,37 @@ struct FileState {
     MultiTuProcessor& multiTuProcessor;
     bool prevWasDtorStart;
 };
+
+struct FileAnnotationState {
+    CXFile file;
+    HighlightedFile* hlFile;
+    CgTokensHandle tokens;
+    std::vector<CXCursor> annotations;
+    std::vector<bool> annotationBad;
+
+    // Maps from token begin offsets to indices (in tokens and tokCurs).
+    std::unordered_map<unsigned, std::size_t> locationMap;
+
+    void populateLocationMap(CXTranslationUnit tu)
+    {
+        for (std::size_t i = 0; i < tokens.size(); ++i) {
+            CXToken tok = tokens.tokens()[i];
+            unsigned off = getLocOffset(clang_getTokenLocation(tu, tok));
+            BOOST_VERIFY(locationMap.insert({off, i}).second);
+        }
+    }
+};
+
+using TuAnnotationMap = std::unordered_map<CXFileUniqueID, FileAnnotationState>;
+
+FileAnnotationState* lookupFileAnnotations(TuAnnotationMap& m, CXFile f)
+{
+    CXFileUniqueID fuid;
+    if (!f || clang_getFileUniqueID(f, &fuid) != 0)
+        return nullptr;
+    auto it = m.find(fuid);
+    return it == m.end() ? nullptr : &it->second;
+}
 
 } // anonymous namespace
 
@@ -365,45 +399,110 @@ namespace {
 struct IncVisitorData {
     MultiTuProcessor& multiTuProcessor;
     CXTranslationUnit tu;
+    TuAnnotationMap& annotationMap;
 };
 
 } // anonymous namespace
 
+
+static CXChildVisitResult annotateVisit(
+    CXCursor c, CXCursor, CXClientData ud)
+{
+    auto& amap = *static_cast<TuAnnotationMap*>(ud);
+    CXFile f;
+    unsigned off;
+    clang_getFileLocation(
+        clang_getCursorLocation(c), &f, nullptr, nullptr, &off);
+    FileAnnotationState* astate = lookupFileAnnotations(amap, f);
+    if (!astate)
+        return CXChildVisit_Continue; // Should we use Recurse here?
+
+    auto itIdx = astate->locationMap.find(off);
+    if (itIdx == astate->locationMap.end()
+        || !astate->annotationBad[itIdx->second]
+    ) {
+        return CXChildVisit_Recurse;
+    }
+
+    CXCursor& acur = astate->annotations[itIdx->second];
+    acur = c;
+    return CXChildVisit_Recurse;
+}
+
+static void annotate(TuAnnotationMap& map, CXCursor root)
+{
+    clang_visitChildren(root, &annotateVisit, &map);
+}
+
 static void processFile(
     CXFile file, CXSourceLocation*, unsigned, CXClientData ud)
 {
+    CXFileUniqueID fuid;
+    if (clang_getFileUniqueID(file, &fuid) != 0)
+        return;
+
     auto& cdata = *static_cast<IncVisitorData*>(ud);
     CXTranslationUnit tu = cdata.tu;
-    MultiTuProcessor& multiTuProcessor = cdata.multiTuProcessor;
 
     CXSourceLocation beg = clang_getLocationForOffset(tu, file, 0);
     CXSourceLocation end = clang_getLocation(tu, file, UINT_MAX, UINT_MAX);
 
-    auto hlFile = multiTuProcessor.prepareToProcess(file);
+    HighlightedFile* hlFile = cdata.multiTuProcessor.prepareToProcess(file);
     if (!hlFile)
         return;
 
     CXToken* tokens;
     unsigned numTokens;
     clang_tokenize(tu, clang_getRange(beg, end), &tokens, &numTokens);
-    CgTokensHandle tokCleanup(tokens, numTokens, tu);
+    CgTokensHandle hToks(tokens, numTokens, tu);
 
-    if (numTokens > 0) {
-        FileState state {*hlFile, multiTuProcessor, false};
-        std::vector<CXCursor> tokCurs(numTokens);
-        clang_annotateTokens(tu, tokens, numTokens, tokCurs.data());
-        for (unsigned i = 0; i < numTokens; ++i) {
-            CXCursor cur = tokCurs[i];
-            CXSourceLocation tokLoc = clang_getTokenLocation(tu, tokens[i]);
-            if (!equalFileLocations(clang_getCursorLocation(cur), tokLoc)) {
-                CXCursor c2 = clang_getCursor(tu, tokLoc);
-                if (equalFileLocations(clang_getCursorLocation(c2), tokLoc))
-                    cur = c2;
-            }
-            processToken(state, tokens[i], cur);
+    if (numTokens == 0)
+        return;
+
+    std::vector<CXCursor> annotations(numTokens);
+    clang_annotateTokens(tu, tokens, numTokens, annotations.data());
+    std::vector<bool> annotationBad(numTokens);
+
+    for (std::size_t i = 0; i < numTokens; ++i) {
+        CXCursor& cur = annotations[i];
+        CXSourceLocation tokLoc = clang_getTokenLocation(tu, tokens[i]);
+        if (!equalFileLocations(clang_getCursorLocation(cur), tokLoc)) {
+            CXCursor c2 = clang_getCursor(tu, tokLoc);
+            CXSourceLocation loc2 = clang_getCursorLocation(c2);
+            if (equalFileLocations(loc2, tokLoc))
+                cur = c2;
+            else
+                annotationBad[i] = true;
         }
     }
-    hlFile->markups.shrink_to_fit();
+
+    FileAnnotationState fstate {
+        std::move(file),
+        std::move(hlFile),
+        std::move(hToks),
+        std::move(annotations),
+        std::move(annotationBad),
+        std::unordered_map<unsigned, std::size_t>()
+    };
+    auto kv = std::make_pair(std::move(fuid), std::move(fstate));
+    auto insRes = cdata.annotationMap.insert(std::move(kv));
+    assert(insRes.second);
+    insRes.first->second.populateLocationMap(tu);
+}
+
+static void writeHlTokens(
+    TuAnnotationMap& annotations, MultiTuProcessor& multiTuProcessor)
+{
+    for (auto& fAnnotationsEntry : annotations) {
+        FileAnnotationState& fAnnotations = fAnnotationsEntry.second;
+        FileState fstate {*fAnnotations.hlFile, multiTuProcessor, false};
+        for (std::size_t i = 0; i < fAnnotations.tokens.size(); ++i) {
+            CXToken tok = fAnnotations.tokens.tokens()[i];
+            CXCursor cur = fAnnotations.annotations[i];
+            processToken(fstate, tok, cur);
+        }
+        fAnnotations.hlFile->markups.shrink_to_fit();
+    }
 }
 
 int synth::processTu(
@@ -434,7 +533,11 @@ int synth::processTu(
         return err + 10;
     }
 
-    IncVisitorData ud {state, tu};
+    TuAnnotationMap annotations;
+    IncVisitorData ud {state, tu, annotations};
     clang_getInclusions(tu, &processFile, &ud);
+    annotate(annotations, clang_getTranslationUnitCursor(tu));
+    writeHlTokens(annotations, state);
+
     return EXIT_SUCCESS;
 }
