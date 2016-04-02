@@ -70,6 +70,10 @@ int main(int argc, char *argv[])
 
     // TODO: Duplicated from annotate.cpp synth::processTu() {{{
     CXTranslationUnit tu = nullptr;
+    unsigned options = 0;
+    if (std::strchr(argv[1], 'p'))
+        options |= CXTranslationUnit_DetailedPreprocessingRecord;
+
     CXErrorCode err = clang_parseTranslationUnit2FullArgv(
         hcidx.get(),
         /*source_filename:*/ nullptr, // Included in commandline.
@@ -77,7 +81,7 @@ int main(int argc, char *argv[])
         argc - 2,
         /*unsaved_files:*/ nullptr,
         /*num_unsaved_files:*/ 0,
-        CXTranslationUnit_DetailedPreprocessingRecord,
+        options,
         &tu);
     CgTuHandle htu(tu);
     if (err != CXError_Success) {
