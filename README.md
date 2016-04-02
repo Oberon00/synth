@@ -3,10 +3,11 @@
 A semantic syntax highlighting and code hyper-linking tool for C and C++.
 It is written in C++ and based on [libclang][], Clang's C-Interface.
 
-An example of what it generates is its [output when run on
-itself](//oberon00.github.io/synth) (note that the directory listing was not
-generated with synth itself but with the ``dir2html.py`` script run on the
-output).
+An example of what it generates is its output when run on itself (note that the
+directory listing was not generated with synth itself but with the
+``dir2html.py`` script run on the output):
+
+> [**DEMO**: synth's source highlighted with synth](//oberon00.github.io/synth)
 
 ## Usage
 
@@ -85,7 +86,7 @@ where only declarations and definitions are bold.
 
 1. Clone or download the repository
 2. Set up dependencies (Boost 1.60 and libclang 3.7+ (tested with 3.8), a C++14
-   compiler).
+   compiler (tested with clang).
 3. Create a build directory and from there run `cmake <path to repo root>`.
 4. Run your build tool on the generated build files e.g. ``make`` or ``msbuild
    synth.sln``. If you have a not too ancient CMake you can just use
