@@ -379,7 +379,7 @@ static void processFile(
         FileState state {*hlFile, multiTuProcessor, false};
         std::vector<CXCursor> tokCurs(numTokens);
         clang_annotateTokens(tu, tokens, numTokens, tokCurs.data());
-        for (unsigned i = 0; i < numTokens - 1; ++i) {
+        for (unsigned i = 0; i < numTokens; ++i) {
             CXCursor cur = tokCurs[i];
             CXSourceLocation tokLoc = clang_getTokenLocation(tu, tokens[i]);
             if (!clang_equalLocations(clang_getCursorLocation(cur), tokLoc)) {
