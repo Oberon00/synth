@@ -5,29 +5,56 @@
 
 using namespace synth;
 
-std::ostream& synth::operator<< (std::ostream& out, CXSourceRange rng)
+void synth::writeLoc(std::ostream& out, CXSourceLocation loc, CXFile f)
 {
-    CXSourceLocation beg = clang_getRangeStart(rng);
-    CXFile f;
+    CXFile locF;
     unsigned lineno, col;
-    clang_getFileLocation(beg, &f, &lineno, &col, nullptr);
-    out << CgStr(clang_getFileName(f)) << ':' << lineno << ':' << col;
-
-    CXSourceLocation end = clang_getRangeEnd(rng);
-    clang_getFileLocation(end, nullptr, &lineno, &col, nullptr);
-    return out << '-' << lineno << ':' << col;
+    clang_getFileLocation(loc, &locF, &lineno, &col, nullptr);
+    if (!f || !clang_File_isEqual(f, locF))
+        out << CgStr(clang_getFileName(locF)) << ':';
+    out << lineno << ':' << col;
 }
 
-std::ostream& synth::operator<< (std::ostream& out, CXCursor c)
+void synth::writeExtent(std::ostream& out, CXSourceRange rng, CXFile f)
 {
-    out << CgStr(clang_getCursorKindSpelling(clang_getCursorKind(c)))
-        << ' ' << clang_getCursorExtent(c);
+    CXSourceLocation beg = clang_getRangeStart(rng);
+    CXFile begF;
+    unsigned begLn;
+    clang_getFileLocation(beg, &begF, &begLn, nullptr, nullptr);
+    writeLoc(out, beg, f);
+
+    CXSourceLocation end = clang_getRangeEnd(rng);
+    out << '-';
+    CXFile endF;
+    unsigned endLn, endCol;
+    clang_getFileLocation(end, &endF, &endLn, &endCol, nullptr);
+    if (!clang_File_isEqual(begF, endF) || begLn != endLn)
+        writeLoc(out, end, begF);
+    else
+        out << endCol;
+}
+
+std::ostream& synth::operator<< (std::ostream& out, CXSourceRange rng)
+{
+    writeExtent(out, rng);
+    return out;
+}
+
+static void writeCursor(std::ostream& out, CXCursor c, CXFile f)
+{
+    out << CgStr(clang_getCursorKindSpelling(clang_getCursorKind(c))) << ' ';
+    writeExtent(out, clang_getCursorExtent(c), f);
     CgStr dn(clang_getCursorDisplayName(c));
     if (!dn.empty())
         out << " D:" << dn;
     CgStr sp(clang_getCursorSpelling(c));
     if (!sp.empty())
         out << " S:" << sp;
+}
+
+std::ostream& synth::operator<< (std::ostream& out, CXCursor c)
+{
+    writeCursor(out, c, nullptr);
     return out;
 }
 
@@ -37,10 +64,10 @@ void synth::writeIndent(int ind)
         std::clog.put(' ');
 }
 
-void synth::dumpSingleCursor(CXCursor c, int ind)
+void synth::dumpSingleCursor(CXCursor c, int ind, CXFile f)
 {
     writeIndent(ind);
-    std::clog << c;
+    writeCursor(std::clog, c, f);
     CXCursor refd = clang_getCursorReferenced(c);
     if (!clang_Cursor_isNull(refd)) {
         if (clang_equalCursors(c, refd)) {
@@ -48,7 +75,8 @@ void synth::dumpSingleCursor(CXCursor c, int ind)
         } else {
             std::clog << '\n';
             writeIndent(ind + 4);
-            std::clog << "-> " << refd;
+            std::clog << "-> ";
+            writeCursor(std::clog, refd, f);
         }
     }
     std::clog << '\n';

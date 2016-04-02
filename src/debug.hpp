@@ -7,8 +7,12 @@
 namespace synth {
 
 void writeIndent(int ind);
-void dumpSingleCursor(CXCursor c, int ind);
+
+// If the locatio of the cursor is in f, no filename is printed.
+void dumpSingleCursor(CXCursor c, int ind, CXFile f = nullptr);
 void dumpAst(CXCursor c, int ind);
+void writeLoc(std::ostream& out, CXSourceLocation loc, CXFile f = nullptr);
+void writeExtent(std::ostream& out, CXSourceRange rng, CXFile f = nullptr);
 std::ostream& operator<< (std::ostream& out, CXCursor c);
 std::ostream& operator<< (std::ostream& out, CXSourceRange rng);
 
