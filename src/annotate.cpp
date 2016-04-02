@@ -17,6 +17,26 @@ using namespace synth;
 
 static const unsigned kMaxRefRecursion = 16;
 
+static bool equalFileLocations(CXSourceLocation loc1, CXSourceLocation loc2)
+{
+    CXFile f1;
+    unsigned off1;
+    clang_getFileLocation(loc1, &f1, nullptr, nullptr, &off1);
+
+    CXFile f2;
+    unsigned off2;
+    clang_getFileLocation(loc2, &f2, nullptr, nullptr, &off2);
+
+    return off1 == off2 && clang_File_isEqual(f1, f2);
+}
+
+static unsigned getLocOffset(CXSourceLocation loc)
+{
+    unsigned r;
+    clang_getFileLocation(loc, nullptr, nullptr, nullptr, &r);
+    return r;
+}
+
 namespace {
 
 struct FileState {
@@ -255,13 +275,6 @@ static TokenAttributes getTokenAttributes(
     }
 }
 
-static unsigned getLocOffset(CXSourceLocation loc)
-{
-    unsigned r;
-    clang_getFileLocation(loc, nullptr, nullptr, nullptr, &r);
-    return r;
-}
-
 static void processToken(FileState& state, CXToken tok, CXCursor cur)
 {
     auto& markups = state.hlFile.markups;
@@ -295,7 +308,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         dtorLnk.endOffset = m->endOffset;
         markups.push_back(std::move(dtorLnk));
         m = &markups.back();
-    } else if (!clang_equalLocations(
+    } else if (!equalFileLocations(
             clang_getRangeStart(rng), clang_getCursorLocation(cur))
     ) {
         return;
@@ -382,9 +395,9 @@ static void processFile(
         for (unsigned i = 0; i < numTokens; ++i) {
             CXCursor cur = tokCurs[i];
             CXSourceLocation tokLoc = clang_getTokenLocation(tu, tokens[i]);
-            if (!clang_equalLocations(clang_getCursorLocation(cur), tokLoc)) {
+            if (!equalFileLocations(clang_getCursorLocation(cur), tokLoc)) {
                 CXCursor c2 = clang_getCursor(tu, tokLoc);
-                if (clang_equalLocations(clang_getCursorLocation(c2), tokLoc))
+                if (equalFileLocations(clang_getCursorLocation(c2), tokLoc))
                     cur = c2;
             }
             processToken(state, tokens[i], cur);
