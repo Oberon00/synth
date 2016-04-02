@@ -47,7 +47,7 @@ namespace {
 struct FileState {
     HighlightedFile& hlFile;
     MultiTuProcessor& multiTuProcessor;
-    bool prevWasDtorStart;
+    bool lnkPending;
 };
 
 struct FileAnnotationState {
@@ -107,14 +107,12 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         return;
 
     CXCursorKind k = clang_getCursorKind(cur);
-    if (state.prevWasDtorStart) {
-        assert (k == CXCursor_Destructor);
-        assert(tk == CXToken_Identifier);
-        state.prevWasDtorStart = false;
-        Markup dtorLnk = {};
-        dtorLnk.beginOffset = getLocOffset(clang_getCursorLocation(cur));
-        dtorLnk.endOffset = m->endOffset;
-        markups.push_back(std::move(dtorLnk));
+    if (state.lnkPending) {
+        state.lnkPending = false;
+        Markup lnk = {};
+        lnk.beginOffset = getLocOffset(clang_getCursorLocation(cur));
+        lnk.endOffset = m->endOffset;
+        markups.push_back(std::move(lnk));
         m = &markups.back();
     } else if (!equalFileLocations(
             clang_getRangeStart(rng), clang_getCursorLocation(cur))
@@ -136,8 +134,15 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
             state.hlFile.markups.push_back(std::move(incLnk));
         return;
     } else if (k == CXCursor_Destructor) {
-        assert(tk == CXToken_Punctuation); // "~"
-        state.prevWasDtorStart = true;
+        state.lnkPending = true;
+        return;
+    } else if (tk == CXToken_Keyword && (
+        k == CXCursor_FunctionDecl || k == CXCursor_CXXMethod)
+        && !std::strcmp(
+            CgStr(clang_getTokenSpelling(tu, tok)).gets(),
+            "operator")
+    ) {
+        state.lnkPending = true;
         return;
     }
 
