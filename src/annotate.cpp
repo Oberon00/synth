@@ -15,6 +15,13 @@
 
 using namespace synth;
 
+// This is needed for macro arguments: clang_equalLocations is only true if two
+// locations are truly equal. That is if either of spelling-, source- or
+// file-location is different, it returns false. However we are only interested
+// in the file location, hence this function.
+// We must work with the offset here because it is in fact often different (and
+// more "correct" for our purposes) from what line:column would suggest. See
+// also comment inside processToken().
 static bool equalFileLocations(CXSourceLocation loc1, CXSourceLocation loc2)
 {
     CXFile f1;
@@ -112,6 +119,13 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
     } else if (!equalFileLocations(
             clang_getRangeStart(rng), clang_getCursorLocation(cur))
     ) {
+        // Note that there is magic in the offset with which equalFileLocations
+        // works (and clang_equalLocations too); it is sometimes different from
+        // what line:column would suggest. Otherwise this condition would not
+        // correctly work because e.g. for a function with built-in return type,
+        // the cursor location of the FunctionDecl starts at the return type
+        // declaration according to line:column, but at the function name (or
+        // operator keyword or dtor tilde) according to the offset.
         return;
     } else if (k == CXCursor_InclusionDirective) {
         Markup incLnk = {};
