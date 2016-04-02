@@ -53,8 +53,10 @@ static void dumpTokens(CXCursor root, bool annotate)
                 dumpAnnotatedToken(tu, tokens[i], cur, f);
             }
         } else {
-            for (unsigned i = 0; i < numTokens; ++i)
+            for (unsigned i = 0; i < numTokens; ++i) {
                 dumpToken(tu, tokens[i], f);
+                std::clog << '\n';
+            }
         }
     }
 }
