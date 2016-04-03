@@ -92,7 +92,8 @@ static bool isBuiltinTypeKw(std::string const& t) {
         || t == "char"
         || t == "char16_t"
         || t == "char32_t"
-        || t == "wchar_t";
+        || t == "wchar_t"
+        || t == "void";
 }
 static TokenAttributes getTokenAttributesImpl(
     CXToken tok,
@@ -152,8 +153,12 @@ static TokenAttributes getTokenAttributesImpl(
             }
             if (k == CXCursor_TypeRef || isBuiltinTypeKw(sp))
                 return TokenAttributes::tyBuiltin;
-            if (clang_isDeclaration(k))
+            if (clang_isDeclaration(k) || k == CXCursor_DeclStmt)
                 return TokenAttributes::kwDecl;
+            if (!std::strcmp(sp, "sizeof") || !std::strcmp(sp, "alignof"))
+                return TokenAttributes::opWord;
+            if (!std::strcmp(sp, "this"))
+                return TokenAttributes::litKw;
             return TokenAttributes::kw;
         }
 
