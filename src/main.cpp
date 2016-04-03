@@ -28,6 +28,7 @@ R"EOT(<!DOCTYPE html>
     </head>
     <body>
         <div class="highlight"><pre>@@code@@</pre></div>
+        <script src="@@rootpath@@/code.js"></script>
     </body>
 </html>)EOT";
 

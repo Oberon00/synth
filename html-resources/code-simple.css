@@ -1,15 +1,7 @@
 /* Heavily based on Pygments' vs style. */
 
-.highlight a {
-    text-decoration: none;
-    color: inherit;
-}
+@import 'base-code.css';
 
-.highlight .Ln:target {
-    /* color below */
-    display: inline-block;
-    width: 100%;
-}
 .highlight .hll, .highlight *:target { background-color: #ffffcc }
 
 

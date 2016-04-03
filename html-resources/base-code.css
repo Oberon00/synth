@@ -1,0 +1,20 @@
+@import 'base.css';
+
+#chooserHolder {
+    float: right;
+}
+
+.highlight a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.highlight a:hover {
+    text-decoration: underline;
+}
+
+.highlight .Ln:target {
+    /* color below */
+    display: inline-block;
+    width: 100%;
+}

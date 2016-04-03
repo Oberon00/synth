@@ -1,22 +1,16 @@
 /* Heavily based on Pygments' colorful style. */
 
+@import 'base-code.css';
+
 .highlight a {
     text-decoration-style: dotted;
     text-decoration-color: lightgray;
-    color: inherit;
 }
 
 .highlight a.nv, .highlight a.vi, .highlight a.vc, .highlight a.nn {
     text-decoration-style: dotted;
     text-decoration-color: #e7e7e7;
 }
-
-.highlight .Ln:target {
-    background-color: #ffe;
-    display: inline-block;
-    width: 100%;
-}
-
 
 .highlight { background: #ffffff; }
 .highlight .decl { font-weight: bold; }

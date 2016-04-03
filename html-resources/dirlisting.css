@@ -1,18 +1,4 @@
-html, body {
-    font-family: Helvetica, Arial, sans-serif;
-}
-
-a {
-    text-decoration: none;
-}
-
-a:hover {
-    text-decoration: underline;
-}
-
-ul {
-    list-style-type: none;
-}
+@import 'base.css';
 
 .dirname {
     font-weight: bold;
