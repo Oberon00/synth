@@ -55,7 +55,7 @@ static TokenAttributes getVarTokenAttributes(CXCursor cur)
     return TokenAttributes::varNonstaticMember;
 }
 
-static TokenAttributes getIntTokenAttributes(std::string const& sp)
+static TokenAttributes getIntTokenAttributes(boost::string_ref sp)
 {
     if (!sp.empty()) {
         if (sp.size() >= 2 && sp[0] == '0') {
@@ -72,18 +72,14 @@ static TokenAttributes getIntTokenAttributes(std::string const& sp)
     return TokenAttributes::litNum;
 }
 
-static bool startsWith(std::string const& s, std::string const& p) {
-    return s.compare(0, p.size(), p) == 0;
-}
-
-static bool isBuiltinTypeKw(std::string const& t) {
-    return startsWith(t, "unsigned ")
+static bool isBuiltinTypeKw(boost::string_ref t) {
+    return t.starts_with("unsigned ")
         || t == "unsigned"
-        || startsWith(t, "signed ")
+        || t.starts_with("signed ")
         || t == "signed"
-        || startsWith(t, "short ")
+        || t.starts_with("short ")
         || t == "short"
-        || startsWith(t, "long ")
+        || t.starts_with("long ")
         || t == "long"
         || t == "int"
         || t == "float"
@@ -98,19 +94,15 @@ static bool isBuiltinTypeKw(std::string const& t) {
 static TokenAttributes getTokenAttributesImpl(
     CXToken tok,
     CXCursor cur,
-    char const* sp, // token spelling
+    boost::string_ref sp, // token spelling
     CXTranslationUnit tu,
     unsigned recursionDepth)
 {
     CXCursorKind k = clang_getCursorKind(cur);
     CXTokenKind tk = clang_getTokenKind(tok);
     if (clang_isPreprocessing(k)) {
-        if (k == CXCursor_InclusionDirective
-            && std::strcmp(sp, "include") != 0
-            && std::strcmp(sp, "#") != 0
-        ) {
+        if (k == CXCursor_InclusionDirective && sp != "include" && sp != "#")
             return TokenAttributes::preIncludeFile;
-        }
         return TokenAttributes::pre;
     }
 
@@ -155,9 +147,9 @@ static TokenAttributes getTokenAttributesImpl(
                 return TokenAttributes::tyBuiltin;
             if (clang_isDeclaration(k) || k == CXCursor_DeclStmt)
                 return TokenAttributes::kwDecl;
-            if (!std::strcmp(sp, "sizeof") || !std::strcmp(sp, "alignof"))
+            if (sp == "sizeof" || sp == "alignof")
                 return TokenAttributes::opWord;
-            if (!std::strcmp(sp, "this"))
+            if (sp == "this")
                 return TokenAttributes::litKw;
             return TokenAttributes::kw;
         }
@@ -244,7 +236,7 @@ static TokenAttributes getTokenAttributesImpl(
 }
 
 TokenAttributes synth::getTokenAttributes(
-    CXToken tok, CXCursor cur, char const* tokSpelling)
+    CXToken tok, CXCursor cur, boost::string_ref tokSpelling)
 {
     return getTokenAttributesImpl(
         tok, cur, tokSpelling, clang_Cursor_getTranslationUnit(cur), 0);

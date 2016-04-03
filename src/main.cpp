@@ -181,7 +181,7 @@ static std::string getFileContents(char const* fname)
 
 static int executeCmdLine(CmdLineArgs const& args)
 {
-    SimpleTemplate tpl(std::string{});
+    SimpleTemplate tpl("");
     if (args.templateFile) {
         try {
             tpl = SimpleTemplate(getFileContents(args.templateFile));

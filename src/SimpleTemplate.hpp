@@ -1,6 +1,7 @@
 #ifndef SYNTH_SIMPLETEMPLATE_HPP_INCLUDED
 #define SYNTH_SIMPLETEMPLATE_HPP_INCLUDED
 
+#include <boost/utility/string_ref.hpp> 
 #include <boost/variant/variant_fwd.hpp>
 
 #include <functional>
@@ -13,7 +14,7 @@ namespace synth {
 
 class SimpleTemplate {
 public:
-    explicit SimpleTemplate(std::string const& text);
+    explicit SimpleTemplate(boost::string_ref text);
 
     using ValCallback = std::function<void(std::ostream&)>;
     using Val = boost::variant<std::string, ValCallback>;

@@ -102,7 +102,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
     m->refd.file = nullptr;
 
     CgStr hsp(clang_getTokenSpelling(tu, tok));
-    char const* sp = hsp.gets();
+    boost::string_ref sp = hsp.gets();
     m->attrs = getTokenAttributes(tok, cur, sp);
 
     CXTokenKind tk = clang_getTokenKind(tok);
@@ -111,9 +111,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
 
     CXCursorKind k = clang_getCursorKind(cur);
     if (state.lnkPending) {
-        if (tk == CXToken_Punctuation && (
-            !std::strcmp(sp, "(") || !std::strcmp(sp, "["))
-        ) {
+        if (tk == CXToken_Punctuation && (sp == "(" || sp == "[")) {
             // This is the "("/"[" of an operator overload and we also want
             // to highlight the closing ")"/"]".
             return;
@@ -149,7 +147,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         return;
     } else if (tk == CXToken_Keyword
         && (k == CXCursor_FunctionDecl || k == CXCursor_CXXMethod)
-        && !std::strcmp(sp, "operator")
+        && sp == "operator"
     ) {
         state.lnkPending = true;
         return;

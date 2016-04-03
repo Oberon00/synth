@@ -8,26 +8,29 @@
 
 using namespace synth;
 
-SimpleTemplate::SimpleTemplate(std::string const& text)
+SimpleTemplate::SimpleTemplate(boost::string_ref text)
 {
-    static char const marker[] = "@@";
-    static unsigned const markerLen = sizeof(marker);
+    static char const rawMarker[] = "@@";
+    static boost::string_ref constexpr marker(rawMarker, sizeof(rawMarker) - 1);
 
-    std::string::size_type last = 0;
     auto beg = text.find(marker);
-    while (beg != std::string::npos) {
-        auto end = text.find(marker, beg + markerLen);
-        if (end == std::string::npos) {
-            m_literals.push_back(text.substr(beg));
-            break;
+    while (beg != boost::string_ref::npos) {
+        m_literals.emplace_back(text.data(), beg);
+        text.remove_prefix(beg + marker.size());
+        auto end = text.find(marker);
+        if (end == boost::string_ref::npos) {
+            std::string& lit = m_literals.back();
+            lit.reserve(lit.size() + marker.size() + text.size());
+            lit.append(marker.data(), marker.size());
+            lit.append(text.data(), text.size());
+            assert(m_literals.size() == m_insertionKeys.size() + 1);
+            return;
         }
-        m_literals.push_back(text.substr(last, beg - last));
-        m_insertionKeys.push_back(text.substr(
-            beg + markerLen - 1, end - beg - markerLen + 1));
-        last = end + markerLen - 1;
-        beg = text.find(marker, last);
+        m_insertionKeys.emplace_back(text.data(), end);
+        text.remove_prefix(end + marker.size());
+        beg = text.find(marker);
     }
-    m_literals.push_back(text.substr(last));
+    m_literals.emplace_back(text.data(), text.size());
     assert(m_literals.size() == m_insertionKeys.size() + 1);
 }
 
