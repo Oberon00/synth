@@ -71,7 +71,7 @@ and ``/usr/include/math.h`` will be processed to
 processed by synth (it will still be parsed though as this is necessary for
 highlighting files that use it).
 
-## Higlighting
+## Highlighting
 
 The highlighting classes are the same ones that
 [Pygments](http://pygments.org/) uses. Additionally the CSS classes ``decl`` and
