@@ -45,7 +45,7 @@ public:
     void registerDef(std::string&& usr, SourceLocation&& def)
     {
         std::lock_guard<std::mutex> lock(m_mut);
-        m_defs.insert({usr, std::move(def)});
+        m_defs.insert({std::move(usr), std::move(def)});
     }
 
     void registerMissingDefLink(
@@ -54,7 +54,7 @@ public:
         std::string&& dstUsr)
     {
         std::lock_guard<std::mutex> lock(m_mut);
-        m_missingDefs[dstUsr].push_back({&file, markupIdx});
+        m_missingDefs[std::move(dstUsr)].push_back({&file, markupIdx});
     }
 
     void resolveMissingRefs();
