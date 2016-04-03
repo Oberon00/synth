@@ -55,9 +55,8 @@ static TokenAttributes getVarTokenAttributes(CXCursor cur)
     return TokenAttributes::varNonstaticMember;
 }
 
-static TokenAttributes getIntCssClasses(CXToken tok, CXTranslationUnit tu)
+static TokenAttributes getIntTokenAttributes(std::string const& sp)
 {
-    std::string sp = CgStr(clang_getTokenSpelling(tu, tok)).gets();
     if (!sp.empty()) {
         if (sp.size() >= 2 && sp[0] == '0') {
             if (sp[1] == 'x' || sp[1] == 'X')
@@ -96,18 +95,20 @@ static bool isBuiltinTypeKw(std::string const& t) {
         || t == "wchar_t";
 }
 static TokenAttributes getTokenAttributesImpl(
-    CXToken tok, CXCursor cur, CXTranslationUnit tu, unsigned recursionDepth)
+    CXToken tok,
+    CXCursor cur,
+    char const* sp, // token spelling
+    CXTranslationUnit tu,
+    unsigned recursionDepth)
 {
     CXCursorKind k = clang_getCursorKind(cur);
     CXTokenKind tk = clang_getTokenKind(tok);
     if (clang_isPreprocessing(k)) {
-        if (k == CXCursor_InclusionDirective) {
-            CgStr spelling = clang_getTokenSpelling(tu, tok);
-            if (std::strcmp(spelling.gets(), "include") != 0
-                    && std::strcmp(spelling.gets(), "#") != 0
-            ) {
-                return TokenAttributes::preIncludeFile;
-            }
+        if (k == CXCursor_InclusionDirective
+            && std::strcmp(sp, "include") != 0
+            && std::strcmp(sp, "#") != 0
+        ) {
+            return TokenAttributes::preIncludeFile;
         }
         return TokenAttributes::pre;
     }
@@ -132,7 +133,7 @@ static TokenAttributes getTokenAttributesImpl(
                 case CXCursor_FloatingLiteral:
                     return TokenAttributes::litNumFlt;
                 case CXCursor_IntegerLiteral:
-                    return getIntCssClasses(tok, tu);
+                    return getIntTokenAttributes(sp);
                 case CXCursor_ImaginaryLiteral:
                     return TokenAttributes::litNum;
                 default:
@@ -149,7 +150,6 @@ static TokenAttributes getTokenAttributesImpl(
             ) {
                 return TokenAttributes::litKw;
             }
-            std::string sp = CgStr(clang_getTokenSpelling(tu, tok)).gets();
             if (k == CXCursor_TypeRef || isBuiltinTypeKw(sp))
                 return TokenAttributes::tyBuiltin;
             if (clang_isDeclaration(k))
@@ -175,8 +175,7 @@ static TokenAttributes getTokenAttributesImpl(
                                 clang_getCursorKind(refd)));
                         std::clog << "When trying to highlight token "
                                 << clang_getTokenExtent(tu, tok) << " "
-                                << CgStr(clang_getTokenSpelling(tu, tok))
-                                << ":\n"
+                                << sp << ":\n"
                                 << "  Cursor " << clang_getCursorExtent(cur)
                                 << " " << kindSp << " references "
                                 << clang_getCursorExtent(refd)
@@ -190,7 +189,7 @@ static TokenAttributes getTokenAttributesImpl(
                         return TokenAttributes::none;
 
                     return getTokenAttributesImpl(
-                        tok, refd, tu, recursionDepth + 1);
+                        tok, refd, sp, tu, recursionDepth + 1);
                 }
 
                 case CXCursor_ObjCPropertyDecl:
@@ -239,8 +238,9 @@ static TokenAttributes getTokenAttributesImpl(
     }
 }
 
-TokenAttributes synth::getTokenAttributes(CXToken tok, CXCursor cur)
+TokenAttributes synth::getTokenAttributes(
+    CXToken tok, CXCursor cur, char const* tokSpelling)
 {
     return getTokenAttributesImpl(
-        tok, cur, clang_Cursor_getTranslationUnit(cur), 0);
+        tok, cur, tokSpelling, clang_Cursor_getTranslationUnit(cur), 0);
 }

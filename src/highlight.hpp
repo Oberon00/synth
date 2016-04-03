@@ -6,7 +6,8 @@
 
 namespace synth {
 
-TokenAttributes getTokenAttributes(CXToken tok, CXCursor cur);
+TokenAttributes getTokenAttributes(
+    CXToken tok, CXCursor cur, char const* tokSpelling);
 
 } // namespace synth
 

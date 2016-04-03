@@ -100,7 +100,10 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
     }
 
     m->refd.file = nullptr;
-    m->attrs = getTokenAttributes(tok, cur);
+
+    CgStr hsp(clang_getTokenSpelling(tu, tok));
+    char const* sp = hsp.gets();
+    m->attrs = getTokenAttributes(tok, cur, sp);
 
     CXTokenKind tk = clang_getTokenKind(tok);
     if (tk == CXToken_Comment || tk == CXToken_Literal)
@@ -108,15 +111,12 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
 
     CXCursorKind k = clang_getCursorKind(cur);
     if (state.lnkPending) {
-        if (tk == CXToken_Punctuation) {
-            CgStr hsp(clang_getTokenSpelling(tu, tok));
-            char const* sp = hsp.gets();
-            if (!std::strcmp(sp, "(") || !std::strcmp(sp, "["))
-            {
-                // This is the "("/"[" of an operator overload and we also want
-                // to highlight the closing ")"/"]".
-                return;
-            }
+        if (tk == CXToken_Punctuation && (
+            !std::strcmp(sp, "(") || !std::strcmp(sp, "["))
+        ) {
+            // This is the "("/"[" of an operator overload and we also want
+            // to highlight the closing ")"/"]".
+            return;
         }
 
         state.lnkPending = false;
@@ -147,11 +147,9 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
     } else if (k == CXCursor_Destructor) {
         state.lnkPending = true;
         return;
-    } else if (tk == CXToken_Keyword && (
-        k == CXCursor_FunctionDecl || k == CXCursor_CXXMethod)
-        && !std::strcmp(
-            CgStr(clang_getTokenSpelling(tu, tok)).gets(),
-            "operator")
+    } else if (tk == CXToken_Keyword
+        && (k == CXCursor_FunctionDecl || k == CXCursor_CXXMethod)
+        && !std::strcmp(sp, "operator")
     ) {
         state.lnkPending = true;
         return;
