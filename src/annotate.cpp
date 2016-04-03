@@ -108,6 +108,17 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
 
     CXCursorKind k = clang_getCursorKind(cur);
     if (state.lnkPending) {
+        if (tk == CXToken_Punctuation) {
+            CgStr hsp(clang_getTokenSpelling(tu, tok));
+            char const* sp = hsp.gets();
+            if (!std::strcmp(sp, "(") || !std::strcmp(sp, "["))
+            {
+                // This is the "("/"[" of an operator overload and we also want
+                // to highlight the closing ")"/"]".
+                return;
+            }
+        }
+
         state.lnkPending = false;
         Markup lnk = {};
         lnk.beginOffset = getLocOffset(clang_getCursorLocation(cur));
