@@ -230,9 +230,10 @@ static TokenAttributes getTokenAttributesImpl(
                         return TokenAttributes::attr;
                     return TokenAttributes::none;
             }
-            SYNTH_DISCLANGWARN_END
-            assert("unreachable" && false);
     }
+    SYNTH_DISCLANGWARN_END
+    assert("unreachable" && false);
+    return TokenAttributes::none;
 }
 
 TokenAttributes synth::getTokenAttributes(
