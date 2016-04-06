@@ -68,7 +68,7 @@ SYNTH_DEF_TOKATTR_OP(&)
 SYNTH_DEF_TOKATTR_OP(^)
 
 #define SYNTH_DEF_TOKATTR_ASSIGN_OP(op)                       \
-    constexpr TokenAttributes operator op (                   \
+    inline TokenAttributes operator op (                   \
         TokenAttributes& lhs, TokenAttributes rhs)            \
     {                                                         \
         auto r = static_cast<TokenAttributesUnderlying>(lhs); \

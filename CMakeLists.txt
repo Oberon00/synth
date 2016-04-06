@@ -18,6 +18,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 if (MSVC)
     add_definitions("/W4" "/MP")
+    add_definitions("-D_SCL_SECURE_NO_WARNINGS")
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
@@ -67,17 +68,28 @@ endif()
 
 set (LLVM_VERSION 3.9 CACHE STRING "Version of LLVM/Clang libs to use.")
 
+message(STATUS "LLVM_DIR: $ENV{LLVM_DIR}")
 find_path(LIBCLANG_INCLUDE_DIR
     "clang-c/Index.h"
+    HINTS "$ENV{LLVM_DIR}/include"
     PATHS
         "/usr/lib/llvm-${LLVM_VERSION}/include/"
         "/usr/include/llvm-${LLVM_VERSION}/llvm/")
 
 find_library(LLVM_LIBRARIES
+    HINTS "$ENV{LLVM_DIR}/lib"
     PATHS "/usr/lib/llvm-${LLVM_VERSION}/lib/"
-    NAMES clang)
+    NAMES clang libclang)
 
-find_package(Boost REQUIRED filesystem system)
+
+if (WIN32)
+    set(Boost_USE_STATIC_LIBS ON)
+endif()
+
+# 1.60 is required for Boost.Filesystem's lexically_normal, etc.
+find_package(Boost 1.60 REQUIRED filesystem system)
 find_package(Threads REQUIRED)
+
 include_directories(SYSTEM ${LIBCLANG_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
+
 add_subdirectory("src")

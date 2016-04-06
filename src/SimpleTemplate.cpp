@@ -11,7 +11,7 @@ using namespace synth;
 SimpleTemplate::SimpleTemplate(boost::string_ref text)
 {
     static char const rawMarker[] = "@@";
-    static boost::string_ref constexpr marker(rawMarker, sizeof(rawMarker) - 1);
+    static boost::string_ref const marker(rawMarker, sizeof(rawMarker) - 1);
 
     auto beg = text.find(marker);
     while (beg != boost::string_ref::npos) {
