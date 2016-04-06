@@ -213,7 +213,7 @@ static void copyWithLinenosUntilNoEof(OutputState& state, unsigned offset)
 void HighlightedFile::writeTo(std::ostream& out) const
 {
     fs::path outPath = dstPath();
-    std::ifstream in(srcPath().c_str());
+    std::ifstream in(srcPath().c_str(), std::ios::binary);
     if (!in) {
         throw std::runtime_error(
             "Could not reopen source " + srcPath().string());
