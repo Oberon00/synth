@@ -16,13 +16,13 @@ public:
         : m_data(std::move(s))
     { }
 
-    CgStr(CgStr&& other)
+    CgStr(CgStr&& other) noexcept
         : m_data(std::move(other.m_data))
     {
         other.m_data.data = nullptr;
     }
 
-    CgStr& operator=(CgStr&& other) {
+    CgStr& operator=(CgStr&& other) noexcept {
         destroy();
         m_data = std::move(other.m_data);
         other.m_data.data = nullptr; // HACK Undocumented behavior.
@@ -30,7 +30,7 @@ public:
         return *this;
     }
 
-    ~CgStr() {
+    ~CgStr() noexcept {
         destroy();
     }
 
