@@ -10,7 +10,7 @@
 
 namespace synth {
 
-class CgStr {
+class CgStr final {
 public:
     CgStr(CXString&& s)
         : m_data(std::move(s))
