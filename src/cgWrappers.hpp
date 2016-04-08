@@ -12,15 +12,15 @@
 
 namespace synth {
 
-class CgTokensHandle {
+class CgTokensHandle final {
 public:
     CgTokensHandle(CXToken* data, unsigned ntokens, CXTranslationUnit tu_)
         : m_data(data), m_ntokens(ntokens), m_tu(tu_)
     {}
 
-    ~CgTokensHandle() { destroy(); }
+    ~CgTokensHandle() noexcept { destroy(); }
 
-    CgTokensHandle(CgTokensHandle&& other)
+    CgTokensHandle(CgTokensHandle&& other) noexcept
         : m_data(other.m_data)
         , m_ntokens(other.m_ntokens)
         , m_tu(other.m_tu)
@@ -28,7 +28,7 @@ public:
         other.release();
     }
 
-    CgTokensHandle& operator= (CgTokensHandle&& other)
+    CgTokensHandle& operator= (CgTokensHandle&& other) noexcept
     {
         destroy();
         m_data = other.m_data;
