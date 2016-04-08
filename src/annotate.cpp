@@ -3,7 +3,7 @@
 #include "CgStr.hpp"
 #include "MultiTuProcessor.hpp"
 #include "cgWrappers.hpp"
-#include "fileIdSupport.hpp"
+#include "FileIdSupport.hpp"
 #include "highlight.hpp"
 #include "output.hpp"
 #include "xref.hpp"
