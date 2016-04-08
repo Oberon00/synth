@@ -6,13 +6,14 @@
 #include <cassert>
 #include <ostream>
 #include <string>
+#include <utility>
 
 namespace synth {
 
 class CgStr {
 public:
     CgStr(CXString&& s)
-        : m_data(s)
+        : m_data(std::move(s))
     { }
 
     CgStr(CgStr&& other)
