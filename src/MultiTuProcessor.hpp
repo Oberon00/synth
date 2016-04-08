@@ -84,7 +84,7 @@ private:
     // Common prefix of all keys in m_dirs
     fs::path m_rootInDir;
 
-    std::mutex m_mut;
+    mutable std::mutex m_mut;
 };
 
 } // namespace synth
