@@ -40,7 +40,7 @@ public:
 
     CXTranslationUnit tu() const { return m_tu; }
     unsigned size() const { return m_ntokens; }
-    CXToken* tokens() { return m_data; }
+    CXToken* tokens() const { return m_data; }
 
 private:
     void destroy()
