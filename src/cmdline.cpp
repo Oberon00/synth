@@ -3,6 +3,7 @@
 #include <cstring>
 #include <stdexcept>
 #include <thread>
+#include <utility>
 
 using namespace synth;
 
@@ -77,7 +78,7 @@ CmdLineArgs CmdLineArgs::parse(int argc, char const* const* argv)
         throw std::runtime_error("Superfluous commandline arguments.");
 
     if (r.nThreads == 0)
-        r.nThreads = std::thread::hardware_concurrency();
+        r.nThreads = std::max(std::thread::hardware_concurrency(), 1u);
     for (auto& dir : r.inOutDirs) {
         if (!dir.second)
             dir.second = ".";
