@@ -3,6 +3,7 @@
 
 #include <clang-c/Index.h>
 #include <algorithm>
+#include <functional>
 
 namespace std {
     template <>

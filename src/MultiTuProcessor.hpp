@@ -1,7 +1,7 @@
 #ifndef SYNTH_MULTI_TU_PROCESSOR_HPP_INCLUDED
 #define SYNTH_MULTI_TU_PROCESSOR_HPP_INCLUDED
 
-#include "fileidsupport.hpp"
+#include "FileIdSupport.hpp"
 #include "output.hpp"
 
 #include <boost/filesystem/path.hpp>
