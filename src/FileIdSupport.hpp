@@ -3,6 +3,7 @@
 
 #include <clang-c/Index.h>
 #include <algorithm>
+#include <iterator>
 #include <functional>
 
 namespace std {
@@ -31,7 +32,8 @@ namespace std {
             return std::equal(
                 std::begin(lhs.data),
                 std::end(lhs.data),
-                std::begin(rhs.data));
+                std::begin(rhs.data),
+                std::end(rhs.data));
         }
     };
 }

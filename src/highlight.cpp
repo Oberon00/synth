@@ -10,7 +10,7 @@
 using namespace synth;
 
 
-unsigned const kMaxRefRecursion = 16;
+static unsigned const kMaxRefRecursion = 16;
 
 static bool isTypeKind(CXCursorKind k)
 {
