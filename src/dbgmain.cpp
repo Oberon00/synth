@@ -19,17 +19,32 @@ static void dumpToken(
 }
 
 static void dumpAnnotatedToken(
-    CXTranslationUnit tu, CXToken tok, CXCursor cur, CXFile f = nullptr)
+    CXTranslationUnit tu,
+    CXToken tok,
+    CXCursor cur,
+    bool extrainfo,
+    CXFile f = nullptr)
 {
     dumpToken(tu, tok, f);
     std::clog << '\t';
     dumpSingleCursor(cur, 0, f);
+    if (extrainfo) {
+        CgStr usr = clang_getCursorUSR(cur);
+        if (!usr.empty())
+            std::clog << "    U: " << usr << '\n';
+        CXType ty = clang_getCursorType(cur);
+        if (ty.kind != CXType_Invalid) {
+            std::clog
+                << "    T: " << CgStr(clang_getTypeKindSpelling(ty.kind))
+                << ' ' << CgStr(clang_getTypeSpelling(ty)) << '\n';
+        }
+    }
     CXCursor c2 = clang_getCursor(tu, clang_getTokenLocation(tu, tok));
     if (!clang_equalCursors(cur, c2))
         dumpSingleCursor(c2, 2, f);
 }
 
-static void dumpTokens(CXCursor root, bool annotate)
+static void dumpTokens(CXCursor root, bool annotate, bool extrainfo)
 {
     // TODO: Duplicate from annotate.cpp processFile()
 
@@ -50,7 +65,7 @@ static void dumpTokens(CXCursor root, bool annotate)
             clang_annotateTokens(tu, tokens, numTokens, tokCurs.data());
             for (unsigned i = 0; i < numTokens; ++i) {
                 CXCursor cur = tokCurs[i];
-                dumpAnnotatedToken(tu, tokens[i], cur, f);
+                dumpAnnotatedToken(tu, tokens[i], cur, extrainfo, f);
             }
         } else {
             for (unsigned i = 0; i < numTokens; ++i) {
@@ -100,7 +115,8 @@ int main(int argc, char *argv[])
     if (std::strchr(argv[1], 't')) {
         dumpTokens(
             clang_getTranslationUnitCursor(tu),
-            std::strchr(argv[1], 'c') != nullptr);
+            std::strchr(argv[1], 'c') != nullptr,
+            std::strchr(argv[1], 'x') != nullptr);
     }
 
     return 0;
