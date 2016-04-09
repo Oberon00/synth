@@ -7,10 +7,13 @@ set(libsynth_HDRS
     "FileIdSupport.hpp"
     "MultiTuProcessor.hpp"
     "SimpleTemplate.hpp"
+    "annotate.hpp"
     "cgWrappers.hpp"
-    "highlight.hpp"
     "config.hpp"
+    "debug.hpp"
+    "highlight.hpp"
     "output.hpp"
+    "xref.hpp"
 )
 
 set(libsynth_SRCS
