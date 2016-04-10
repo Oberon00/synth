@@ -287,7 +287,6 @@ static int executeCmdLine(CmdLineArgs const& args)
         if (r)
             return r;
     }
-    state.resolveMissingRefs();
     state.writeOutput(tpl);
     return EXIT_SUCCESS;
 }

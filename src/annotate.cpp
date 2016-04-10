@@ -99,8 +99,6 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         return;
     }
 
-    m->refd.file = nullptr;
-
     CgStr hsp(clang_getTokenSpelling(tu, tok));
     boost::string_ref sp = hsp.gets();
     m->attrs = getTokenAttributes(tok, cur, sp);
@@ -123,9 +121,10 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         lnk.endOffset = m->endOffset;
         markups.push_back(std::move(lnk));
         m = &markups.back();
-    } else if (!equalFileLocations(
-            clang_getRangeStart(rng), clang_getCursorLocation(cur))
-    ) {
+    }
+    else if (!equalFileLocations(
+        clang_getRangeStart(rng), clang_getCursorLocation(cur))
+        ) {
         // Note that there is magic in the offset with which equalFileLocations
         // works (and clang_equalLocations too); it is sometimes different from
         // what line:column would suggest. Otherwise this condition would not
@@ -134,21 +133,25 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         // declaration according to line:column, but at the function name (or
         // operator keyword or dtor tilde) according to the offset.
         return;
-    } else if (k == CXCursor_InclusionDirective) {
+    }
+    else if (k == CXCursor_InclusionDirective) {
         Markup incLnk = {};
         CXSourceRange incrng = clang_getCursorExtent(cur);
         incLnk.beginOffset = getLocOffset(clang_getRangeStart(incrng));
         incLnk.endOffset = getLocOffset(clang_getRangeEnd(incrng));
-        if (linkInclude(incLnk, cur, state.multiTuProcessor))
+        linkCursor(incLnk, cur, state.multiTuProcessor);
+        if (incLnk.isRef())
             state.hlFile.markups.push_back(std::move(incLnk));
         return;
-    } else if (k == CXCursor_Destructor) {
+    }
+    else if (k == CXCursor_Destructor) {
         state.lnkPending = true;
         return;
-    } else if (tk == CXToken_Keyword
+    }
+    else if (tk == CXToken_Keyword
         && (k == CXCursor_FunctionDecl || k == CXCursor_CXXMethod)
         && sp == "operator"
-    ) {
+        ) {
         state.lnkPending = true;
         return;
     }
@@ -156,35 +159,17 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
     if (clang_isDeclaration(k))
         m->attrs |= TokenAttributes::flagDecl;
 
-    // clang_isReference() sometimes reports false negatives, e.g. for
-    // overloaded operators, so check manually.
-    CXCursor referenced = clang_getCursorReferenced(cur);
-    bool isref = !clang_Cursor_isNull(referenced)
-        && !clang_equalCursors(cur, referenced);
-    if (isref)
-        linkCursorIfIncludedDst(*m, referenced, state.multiTuProcessor);
-
     CXCursor defcur = clang_getCursorDefinition(cur);
     if (clang_equalCursors(defcur, cur)) { // This is a definition:
         m->attrs |= TokenAttributes::flagDef;
         CgStr usr(clang_getCursorUSR(cur));
         if (!usr.empty()) {
-            SourceLocation decl {&state.hlFile, lineno};
+            SourceLocation decl{ &state.hlFile, lineno };
             state.multiTuProcessor.registerDef(usr.get(), std::move(decl));
         }
-    } else if (!isref) {
-        if (clang_Cursor_isNull(defcur)) {
-            CgStr usr(clang_getCursorUSR(cur));
-            if (!usr.empty()) {
-                state.multiTuProcessor.registerMissingDefLink(
-                    state.hlFile,
-                    state.hlFile.markups.size() - 1,
-                    usr.get());
-            }
-        } else {
-            linkCursorIfIncludedDst(*m, defcur, state.multiTuProcessor);
-        }
     }
+
+    linkCursor(*m, cur, state.multiTuProcessor);
 }
 
 namespace {

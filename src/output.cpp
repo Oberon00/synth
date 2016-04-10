@@ -12,14 +12,6 @@
 
 using namespace synth;
 
-static std::string relativeUrl(fs::path const& from, fs::path const& to)
-{
-    if (to == from)
-        return std::string();
-    fs::path r = to.lexically_relative(from.parent_path());
-    return r == "." ? std::string() : r.string();
-}
-
 bool Markup::empty() const
 {
     return beginOffset == endOffset
@@ -31,18 +23,6 @@ fs::path HighlightedFile::dstPath() const
     fs::path r = inOutDir->second / fname;
     r += ".html";
     return r;
-}
-
-void HighlightedFile::prepareOutput()
-{
-    // ORDER BY beginOffset ASC, endOffset DESC
-    std::sort(
-        markups.begin(), markups.end(),
-        [] (Markup const& lhs, Markup const& rhs) {
-            return lhs.beginOffset != rhs.beginOffset
-                ? lhs.beginOffset < rhs.beginOffset
-                : lhs.endOffset > rhs.endOffset;
-        });
 }
 
 static char const* getTokenKindCssClass(TokenAttributes attrs)
@@ -99,16 +79,18 @@ static void writeCssClasses(TokenAttributes attrs, std::ostream& out)
 }
 
 static void writeBeginTag(
-    Markup const& m, fs::path const& outPath, std::ostream& out)
+    Markup const& m,
+    fs::path const& outPath,
+    MultiTuProcessor& multiTuProcessor,
+    std::ostream& out)
 {
     if (m.empty())
         return;
+
     out << '<';
     if (m.isRef()) {
         out << "a href=\"";
-        out << relativeUrl(outPath, m.refd.file->dstPath());
-        if (m.refd.lineno != 0)
-            out << "#L" << m.refd.lineno;
+        m.refd(out, outPath, multiTuProcessor);
         out << "\" ";
     } else {
         out << "span ";
@@ -148,6 +130,7 @@ struct OutputState {
     unsigned lineno;
     std::vector<Markup const*> const& activeTags;
     fs::path const& outPath;
+    MultiTuProcessor& multiTuProcessor;
 };
 
 } // anonymous namespace
@@ -175,8 +158,13 @@ static bool copyWithLinenosUntil(OutputState& state, unsigned offset)
                         << state.lineno
                         << "\" class=\"Ln\">";
 
-                    for (auto const& m: state.activeTags)
-                        writeBeginTag(*m, state.outPath, state.out);
+                    for (auto const& m : state.activeTags) {
+                        writeBeginTag(
+                            *m,
+                            state.outPath,
+                            state.multiTuProcessor,
+                            state.out);
+                    }
                 } break;
 
                 case '<':
@@ -210,8 +198,18 @@ static void copyWithLinenosUntilNoEof(OutputState& state, unsigned offset)
     }
 }
 
-void HighlightedFile::writeTo(std::ostream& out) const
+void HighlightedFile::writeTo(
+    std::ostream& out, MultiTuProcessor& multiTuProcessor)
 {
+    // ORDER BY beginOffset ASC, endOffset DESC
+    std::sort(
+        markups.begin(), markups.end(),
+        [] (Markup const& lhs, Markup const& rhs) {
+            return lhs.beginOffset != rhs.beginOffset
+                ? lhs.beginOffset < rhs.beginOffset
+                : lhs.endOffset > rhs.endOffset;
+        });
+
     fs::path outPath = dstPath();
     std::ifstream in(srcPath().c_str(), std::ios::binary);
     if (!in) {
@@ -219,7 +217,7 @@ void HighlightedFile::writeTo(std::ostream& out) const
             "Could not reopen source " + srcPath().string());
     }
     std::vector<Markup const*> activeTags;
-    OutputState state {in, out, 0, activeTags, outPath};
+    OutputState state {in, out, 0, activeTags, outPath, multiTuProcessor};
     for (auto const& m : markups) {
         while (!activeTags.empty()
             && m.beginOffset >= activeTags.back()->endOffset
@@ -231,7 +229,7 @@ void HighlightedFile::writeTo(std::ostream& out) const
         }
 
         copyWithLinenosUntilNoEof(state, m.beginOffset);
-        writeBeginTag(m, state.outPath, out);
+        writeBeginTag(m, state.outPath, state.multiTuProcessor, out);
         activeTags.push_back(&m);
     }
     BOOST_VERIFY(!copyWithLinenosUntil(state, UINT_MAX));

@@ -95,16 +95,20 @@ struct SourceLocation {
     bool valid() const { return file != nullptr; }
 };
 
+class MultiTuProcessor;
+
+using CodeRef = std::function<void(std::ostream&, fs::path const&, MultiTuProcessor&)>;
+
 struct Markup {
     unsigned beginOffset;
     unsigned endOffset;
 
     TokenAttributes attrs;
 
-    SourceLocation refd;
+    CodeRef refd;
 
     bool empty() const;
-    bool isRef() const { return refd.valid(); }
+    bool isRef() const { return static_cast<bool>(refd); }
 };
 
 struct HighlightedFile {
@@ -112,15 +116,12 @@ struct HighlightedFile {
     fs::path fname;
     std::pair<fs::path, fs::path> const* inOutDir;
 
+    std::vector<Markup> markups;
+
     fs::path dstPath() const;
     fs::path srcPath() const { return inOutDir->first / fname; }
 
-    std::vector<Markup> markups;
-
-    // May invalidate references and indexes into markups.
-    void prepareOutput();
-
-    void writeTo(std::ostream& out) const;
+    void writeTo(std::ostream& out, MultiTuProcessor& multiTuProcessor);
 };
 
 }

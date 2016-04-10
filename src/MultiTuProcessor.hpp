@@ -19,11 +19,6 @@ class SimpleTemplate;
 
 namespace fs = boost::filesystem;
 
-struct MissingDef {
-    HighlightedFile* hlFile;
-    std::size_t markupIdx;
-};
-
 struct FileEntry {
     std::atomic_flag processed;
     HighlightedFile hlFile;
@@ -48,23 +43,18 @@ public:
         m_defs.insert({std::move(usr), std::move(def)});
     }
 
-    void registerMissingDefLink(
-        HighlightedFile& file,
-        std::size_t markupIdx,
-        std::string&& dstUsr)
-    {
-        std::lock_guard<std::mutex> lock(m_mut);
-        m_missingDefs[std::move(dstUsr)].push_back({&file, markupIdx});
-    }
-
-    void resolveMissingRefs();
-
+    // Not threadsafe!
     void writeOutput(SimpleTemplate const& tpl);
+
+    // Not threadsafe!
+    SourceLocation const* findMissingDef(std::string const& usr)
+    {
+        auto it = m_defs.find(usr);
+        return it == m_defs.end() ? nullptr : &it->second;
+    }
 
 private:
     using FileEntryMap = std::unordered_map<CXFileUniqueID, FileEntry>;
-
-    Markup& markupFromMissingDef(MissingDef const& def);
 
     // Returns nullptr if f should be ignored.
     FileEntry* obtainFileEntry(CXFile f);
@@ -77,9 +67,6 @@ private:
 
     // Maps from USRs to source location
     std::unordered_map<std::string, SourceLocation> m_defs;
-
-    // Maps from USRs to missing definitions
-    std::unordered_map<std::string, std::vector<MissingDef>> m_missingDefs;
 
     // Common prefix of all keys in m_dirs
     fs::path m_rootInDir;

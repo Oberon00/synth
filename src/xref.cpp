@@ -1,5 +1,6 @@
 #include "xref.hpp"
 
+#include "CgStr.hpp"
 #include "MultiTuProcessor.hpp"
 #include "output.hpp"
 
@@ -7,13 +8,23 @@
 
 using namespace synth;
 
-void synth::linkSymbol(Markup& m, SourceLocation const& sym)
+static std::string relativeUrl(fs::path const& from, fs::path const& to)
 {
-    if (sym.valid())
-        m.refd = sym;
+    if (to == from)
+        return std::string();
+    fs::path r = to.lexically_relative(from.parent_path());
+    return r == "." ? std::string() : r.string();
 }
 
-void synth::linkCursorIfIncludedDst(
+static void writeDstUrl(
+    std::ostream& out, fs::path const& outPath, SourceLocation const& dst)
+{
+    out << relativeUrl(outPath, dst.file->dstPath());
+    if (dst.lineno != 0)
+        out << "#L" << dst.lineno;
+}
+
+static bool linkCursorIfIncludedDst(
     Markup& m, CXCursor dst, MultiTuProcessor& state)
 {
     CXFile file;
@@ -22,11 +33,16 @@ void synth::linkCursorIfIncludedDst(
         clang_getCursorLocation(dst), &file, &lineno, nullptr, nullptr);
     HighlightedFile const* hlFile = state.referenceFilename(file);
     if (!hlFile)
-        return;
-    return linkSymbol(m, {hlFile, lineno});
+        return false;
+    m.refd = [hlFile, lineno](
+        std::ostream& out, fs::path const& outPath, MultiTuProcessor&)
+    {
+        writeDstUrl(out, outPath, { hlFile, lineno });
+    };
+    return true;
 }
 
-bool synth::linkInclude(
+static bool linkInclude(
     Markup& m,
     CXCursor incCursor,
     MultiTuProcessor& state)
@@ -35,7 +51,48 @@ bool synth::linkInclude(
     HighlightedFile const* hlFile = state.referenceFilename(file);
     if (!hlFile)
         return false;
-    m.refd.file = hlFile;
-    m.refd.lineno = 0;
+    m.refd = [hlFile](
+        std::ostream& out, fs::path const& outPath, MultiTuProcessor&)
+    {
+        writeDstUrl(out, outPath, { hlFile, 0 });
+    };
     return true;
+}
+
+static void linkExternalDef(Markup& m, CXCursor cur, MultiTuProcessor&)
+{
+    CgStr hUsr(clang_getCursorUSR(cur));
+    if (hUsr.empty())
+        return;
+    m.refd = [usr = hUsr.copy()](
+        std::ostream& out, fs::path const& outPath, MultiTuProcessor& state)
+    {
+        SourceLocation const* loc = state.findMissingDef(usr);
+        if (loc)
+            writeDstUrl(out, outPath, *loc);
+    };
+}
+
+void synth::linkCursor(Markup& m, CXCursor cur, MultiTuProcessor& state)
+{
+    CXCursorKind k = clang_getCursorKind(cur);
+
+    if (k == CXCursor_InclusionDirective) {
+        linkInclude(m, cur, state);
+    } else {
+        // clang_isReference() sometimes reports false negatives, e.g. for
+        // overloaded operators, so check manually.
+        CXCursor referenced = clang_getCursorReferenced(cur);
+        bool isref = !clang_Cursor_isNull(referenced)
+            && !clang_equalCursors(cur, referenced);
+        if (isref) {
+            linkCursorIfIncludedDst(m, referenced, state);
+        } else if (
+            (m.attrs & (TokenAttributes::flagDef | TokenAttributes::flagDecl))
+                == TokenAttributes::flagDecl
+        ) {
+            linkExternalDef(m, cur, state);
+        }
+    }
+
 }

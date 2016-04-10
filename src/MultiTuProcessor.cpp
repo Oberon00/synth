@@ -116,28 +116,6 @@ FileEntry* MultiTuProcessor::obtainFileEntry(CXFile f)
     return &e;
 }
 
-void MultiTuProcessor::resolveMissingRefs()
-{
-    for (auto it = m_missingDefs.begin(); it != m_missingDefs.end(); ) {
-        auto def = m_defs.find(it->first);
-        if (def != m_defs.end()) { // Definition was resolved:
-            for (auto const& ref : it->second) {
-                Markup& m = markupFromMissingDef(ref);
-                linkSymbol(m, def->second);
-            }
-            it = m_missingDefs.erase(it);
-        } else {
-            ++it;
-        }
-    }
-}
-
-Markup& MultiTuProcessor::markupFromMissingDef(MissingDef const& def)
-{
-    assert(def.markupIdx < def.hlFile->markups.size());
-    return def.hlFile->markups[def.markupIdx];
-}
-
 void MultiTuProcessor::writeOutput(SimpleTemplate const& tpl)
 {
     if (m_dirs.empty())
@@ -149,11 +127,9 @@ void MultiTuProcessor::writeOutput(SimpleTemplate const& tpl)
     bool commonRoot = isPathSuffix(
         normalAbsolute(fs::current_path()), normalAbsolute(rootOutDir));
     SimpleTemplate::Context ctx;
-    m_missingDefs.clear(); // Will be invalidated by the below operations.
     std::clog << "Writing " << m_processedFiles.size() << " HTML files...\n";
     for (auto& fentry : m_processedFiles) {
         auto& hlFile = fentry.second.hlFile;
-        hlFile.prepareOutput();
         auto dstPath = hlFile.dstPath();
         auto hldir = dstPath.parent_path();
         if (hldir != ".")
@@ -161,7 +137,7 @@ void MultiTuProcessor::writeOutput(SimpleTemplate const& tpl)
         std::ofstream outfile(dstPath.c_str());
         outfile.exceptions(std::ios::badbit | std::ios::failbit);
         ctx["code"] = SimpleTemplate::ValCallback(std::bind(
-            &HighlightedFile::writeTo, &hlFile, std::placeholders::_1));
+            &HighlightedFile::writeTo, &hlFile, std::placeholders::_1, std::ref(*this)));
         ctx["filename"] = hlFile.fname.string();
         ctx["rootpath"] = fs::relative(
                 commonRoot ? rootOutDir : hlFile.inOutDir->second, hldir)

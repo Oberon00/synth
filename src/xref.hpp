@@ -10,9 +10,7 @@ struct Markup;
 struct SourceLocation;
 class MultiTuProcessor;
 
-void linkCursorIfIncludedDst(Markup& m, CXCursor dst, MultiTuProcessor& state);
-void linkSymbol(Markup& m, SourceLocation const& sym);
-bool linkInclude(Markup& m, CXCursor incCursor, MultiTuProcessor& state);
+void linkCursor(Markup& m, CXCursor mcur, MultiTuProcessor& state);
 
 } // namespace synth
 
