@@ -199,7 +199,8 @@ static int executeCmdLine(CmdLineArgs const& args)
             /*displayDiagnostics:*/ true));
 
     MultiTuProcessor state(
-        PathMap(args.inOutDirs.begin(), args.inOutDirs.end()));
+        PathMap(args.inOutDirs.begin(), args.inOutDirs.end()),
+        [](Markup&, CXCursor) {});
 
     if (args.compilationDbDir) {
         CXCompilationDatabase_Error err;

@@ -43,7 +43,9 @@ static fs::path commonPrefix(fs::path const& p1, fs::path const& p2)
     return r;
 }
 
-MultiTuProcessor::MultiTuProcessor(PathMap const& dirs)
+MultiTuProcessor::MultiTuProcessor(
+    PathMap const& dirs, ExternalRefLinker&& refLinker)
+    : m_refLinker(std::move(refLinker))
 {
     if (dirs.empty())
         return;

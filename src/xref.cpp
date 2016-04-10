@@ -57,18 +57,20 @@ static void linkInclude(
     };
 }
 
-static void linkExternalDef(Markup& m, CXCursor cur, MultiTuProcessor&)
+static void linkExternalDef(Markup& m, CXCursor cur, MultiTuProcessor& state)
 {
     CgStr hUsr(clang_getCursorUSR(cur));
     if (hUsr.empty())
         return;
-    m.refd = [usr = hUsr.copy()](
-        std::ostream& out, fs::path const& outPath, MultiTuProcessor& state)
+    state.linkExternalRef(m, cur);
+    m.refd = [usr = hUsr.copy(), extRef = std::move(m.refd)] (
         fs::path const& outPath, MultiTuProcessor& state_)
     {
         SourceLocation const* loc = state_.findMissingDef(usr);
         if (loc)
             return locationUrl(outPath, *loc);
+        if (extRef)
+            return extRef(outPath, state_);
         return std::string();
     };
 }
@@ -76,23 +78,30 @@ static void linkExternalDef(Markup& m, CXCursor cur, MultiTuProcessor&)
 void synth::linkCursor(Markup& m, CXCursor cur, MultiTuProcessor& state)
 {
     CXCursorKind k = clang_getCursorKind(cur);
+    bool shouldRef = false;
 
     if (k == CXCursor_InclusionDirective) {
         linkInclude(m, cur, state);
+        shouldRef = true;
     } else {
         // clang_isReference() sometimes reports false negatives, e.g. for
         // overloaded operators, so check manually.
         CXCursor referenced = clang_getCursorReferenced(cur);
         bool isref = !clang_Cursor_isNull(referenced)
             && !clang_equalCursors(cur, referenced);
+        shouldRef = isref;
         if (isref) {
             linkCursorIfIncludedDst(m, referenced, state);
         } else if (
             (m.attrs & (TokenAttributes::flagDef | TokenAttributes::flagDecl))
-                == TokenAttributes::flagDecl
+            != TokenAttributes::none
         ) {
-            linkExternalDef(m, cur, state);
+            if ((m.attrs & TokenAttributes::flagDef) == TokenAttributes::none)
+                linkExternalDef(m, cur, state);
+            shouldRef = true;
         }
     }
 
+    if (shouldRef && !m.isRef())
+        state.linkExternalRef(m, std::move(cur));
 }

@@ -26,9 +26,14 @@ struct FileEntry {
 
 using PathMap = std::vector<std::pair<fs::path, fs::path>>;
 
+// Trys to link m to an external URL that represents what refcur references.
+// The callee must be thread safe.
+using ExternalRefLinker = std::function<void(Markup& m, CXCursor mcur)>;
+
 class MultiTuProcessor {
 public:
-    explicit MultiTuProcessor(PathMap const& rootdir_);
+    explicit MultiTuProcessor(
+        PathMap const& rootdir_, ExternalRefLinker&& refLinker);
 
     bool isFileIncluded(fs::path const& p) const;
 
@@ -53,6 +58,11 @@ public:
         return it == m_defs.end() ? nullptr : &it->second;
     }
 
+    void linkExternalRef(Markup& m, CXCursor mcur)
+    {
+        m_refLinker(m, mcur);
+    }
+
 private:
     using FileEntryMap = std::unordered_map<CXFileUniqueID, FileEntry>;
 
@@ -70,6 +80,8 @@ private:
 
     // Common prefix of all keys in m_dirs
     fs::path m_rootInDir;
+
+    ExternalRefLinker m_refLinker;
 
     std::mutex m_mut;
 };
