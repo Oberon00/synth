@@ -16,15 +16,18 @@ static std::string relativeUrl(fs::path const& from, fs::path const& to)
     return r == "." ? std::string() : r.string();
 }
 
-static void writeDstUrl(
-    std::ostream& out, fs::path const& outPath, SourceLocation const& dst)
+static std::string locationUrl(
+    fs::path const& outPath, SourceLocation const& dst)
 {
-    out << relativeUrl(outPath, dst.file->dstPath());
-    if (dst.lineno != 0)
-        out << "#L" << dst.lineno;
+    std::string r = relativeUrl(outPath, dst.file->dstPath());
+    if (dst.lineno != 0) {
+        r += "#L";
+        r += std::to_string(dst.lineno);
+    }
+    return r;
 }
 
-static bool linkCursorIfIncludedDst(
+static void linkCursorIfIncludedDst(
     Markup& m, CXCursor dst, MultiTuProcessor& state)
 {
     CXFile file;
@@ -33,16 +36,13 @@ static bool linkCursorIfIncludedDst(
         clang_getCursorLocation(dst), &file, &lineno, nullptr, nullptr);
     HighlightedFile const* hlFile = state.referenceFilename(file);
     if (!hlFile)
-        return false;
-    m.refd = [hlFile, lineno](
-        std::ostream& out, fs::path const& outPath, MultiTuProcessor&)
-    {
-        writeDstUrl(out, outPath, { hlFile, lineno });
+        return;
+    m.refd = [hlFile, lineno](fs::path const& outPath, MultiTuProcessor&) {
+        return locationUrl(outPath, { hlFile, lineno });
     };
-    return true;
 }
 
-static bool linkInclude(
+static void linkInclude(
     Markup& m,
     CXCursor incCursor,
     MultiTuProcessor& state)
@@ -50,13 +50,11 @@ static bool linkInclude(
     CXFile file = clang_getIncludedFile(incCursor);
     HighlightedFile const* hlFile = state.referenceFilename(file);
     if (!hlFile)
-        return false;
-    m.refd = [hlFile](
-        std::ostream& out, fs::path const& outPath, MultiTuProcessor&)
+        return;
+    m.refd = [hlFile](fs::path const& outPath, MultiTuProcessor&)
     {
-        writeDstUrl(out, outPath, { hlFile, 0 });
+        return locationUrl(outPath, { hlFile, 0 });
     };
-    return true;
 }
 
 static void linkExternalDef(Markup& m, CXCursor cur, MultiTuProcessor&)
@@ -66,10 +64,12 @@ static void linkExternalDef(Markup& m, CXCursor cur, MultiTuProcessor&)
         return;
     m.refd = [usr = hUsr.copy()](
         std::ostream& out, fs::path const& outPath, MultiTuProcessor& state)
+        fs::path const& outPath, MultiTuProcessor& state_)
     {
-        SourceLocation const* loc = state.findMissingDef(usr);
+        SourceLocation const* loc = state_.findMissingDef(usr);
         if (loc)
-            writeDstUrl(out, outPath, *loc);
+            return locationUrl(outPath, *loc);
+        return std::string();
     };
 }
 

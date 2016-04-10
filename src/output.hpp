@@ -97,7 +97,8 @@ struct SourceLocation {
 
 class MultiTuProcessor;
 
-using CodeRef = std::function<void(std::ostream&, fs::path const&, MultiTuProcessor&)>;
+// return.empty(): No reference.
+using CodeRef = std::function<std::string(fs::path const&, MultiTuProcessor&)>;
 
 struct Markup {
     unsigned beginOffset;

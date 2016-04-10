@@ -78,22 +78,25 @@ static void writeCssClasses(TokenAttributes attrs, std::ostream& out)
     out << getTokenKindCssClass(attrs);
 }
 
-static void writeBeginTag(
+// return: The written tag was a reference.
+static bool writeBeginTag(
     Markup const& m,
     fs::path const& outPath,
     MultiTuProcessor& multiTuProcessor,
     std::ostream& out)
 {
-    if (m.empty())
-        return;
+    std::string href = m.isRef()
+        ? m.refd(outPath, multiTuProcessor) : std::string();
+
+    if (href.empty() && m.attrs == TokenAttributes::none)
+        return false;
 
     out << '<';
-    if (m.isRef()) {
-        out << "a href=\"";
-        m.refd(out, outPath, multiTuProcessor);
-        out << "\" ";
-    } else {
+
+    if (href.empty()) {
         out << "span ";
+    } else {
+        out << "a href=\"" << href << "\" ";
     }
 
     if (m.attrs != TokenAttributes::none) {
@@ -102,39 +105,47 @@ static void writeBeginTag(
         out << "\" ";
     }
     out << '>';
+
+    return !href.empty();
 }
 
-static void writeEndTag(Markup const& m, std::ostream& out)
-{
-    if (m.isRef())
-        out << "</a>";
-    else if (!m.empty())
-        out << "</span>";
-}
-
-static void writeAllEnds(
-    std::ostream& out, std::vector<Markup const*> const& activeTags)
-{
-
-    auto rit = activeTags.rbegin();
-    auto rend = activeTags.rend();
-    for (; rit != rend; ++rit)
-        writeEndTag(**rit, out);
-}
 
 namespace {
+
+struct MarkupInfo {
+    Markup const* markup;
+    bool wasRef;
+};
 
 struct OutputState {
     std::istream& in;
     std::ostream& out;
     unsigned lineno;
-    std::vector<Markup const*> const& activeTags;
+    std::vector<MarkupInfo> const& activeTags;
     fs::path const& outPath;
     MultiTuProcessor& multiTuProcessor;
 };
 
 } // anonymous namespace
 
+
+static void writeEndTag(MarkupInfo const& mi, std::ostream& out)
+{
+    if (mi.wasRef)
+        out << "</a>";
+    else if (mi.markup->attrs != TokenAttributes::none)
+        out << "</span>";
+}
+
+static void writeAllEnds(
+    std::ostream& out, std::vector<MarkupInfo> const& activeTags)
+{
+
+    auto rit = activeTags.rbegin();
+    auto rend = activeTags.rend();
+    for (; rit != rend; ++rit)
+        writeEndTag(*rit, out);
+}
 
 static bool copyWithLinenosUntil(OutputState& state, unsigned offset)
 {
@@ -158,9 +169,9 @@ static bool copyWithLinenosUntil(OutputState& state, unsigned offset)
                         << state.lineno
                         << "\" class=\"Ln\">";
 
-                    for (auto const& m : state.activeTags) {
+                    for (auto const& mi : state.activeTags) {
                         writeBeginTag(
-                            *m,
+                            *mi.markup,
                             state.outPath,
                             state.multiTuProcessor,
                             state.out);
@@ -216,21 +227,22 @@ void HighlightedFile::writeTo(
         throw std::runtime_error(
             "Could not reopen source " + srcPath().string());
     }
-    std::vector<Markup const*> activeTags;
+    std::vector<MarkupInfo> activeTags;
     OutputState state {in, out, 0, activeTags, outPath, multiTuProcessor};
     for (auto const& m : markups) {
         while (!activeTags.empty()
-            && m.beginOffset >= activeTags.back()->endOffset
+            && m.beginOffset >= activeTags.back().markup->endOffset
         ) {
-            Markup const& mEnd = *activeTags.back();
-            copyWithLinenosUntilNoEof(state, mEnd.endOffset);
-            writeEndTag(mEnd, out);
+            MarkupInfo const& miEnd = activeTags.back();
+            copyWithLinenosUntilNoEof(state, miEnd.markup->endOffset);
+            writeEndTag(miEnd, out);
             activeTags.pop_back();
         }
 
         copyWithLinenosUntilNoEof(state, m.beginOffset);
-        writeBeginTag(m, state.outPath, state.multiTuProcessor, out);
-        activeTags.push_back(&m);
+        bool wasRef = writeBeginTag(
+            m, state.outPath, state.multiTuProcessor, out);
+        activeTags.push_back({ &m, wasRef });
     }
     BOOST_VERIFY(!copyWithLinenosUntil(state, UINT_MAX));
     writeAllEnds(out, activeTags);
