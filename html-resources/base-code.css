@@ -5,12 +5,7 @@
 }
 
 .highlight a {
-    text-decoration: none;
     color: inherit;
-}
-
-.highlight a:hover {
-    text-decoration: underline;
 }
 
 .highlight .Ln:target {
