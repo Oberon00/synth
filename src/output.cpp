@@ -6,7 +6,6 @@
 #include <boost/filesystem.hpp>
 
 #include <climits>
-#include <fstream>
 #include <utility>
 
 
@@ -222,7 +221,7 @@ void HighlightedFile::writeTo(
         });
 
     fs::path outPath = dstPath();
-    std::ifstream in(srcPath().c_str(), std::ios::binary);
+    fs::ifstream in(srcPath(), std::ios::binary);
     if (!in) {
         throw std::runtime_error(
             "Could not reopen source " + srcPath().string());
