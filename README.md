@@ -55,6 +55,18 @@ These options are allowed:
   * ``-e <arg>``: Can be given multiple times. ``<arg>`` will be appended to the
     arguments passed to clang. E.g. to specify an additional include directory
     use ``-e -I -e ~/my/include/dir``. Useful in ``--db`` mode.
+  * ``--doxytags <doxytagfile> <baseurl>``: Can be given multiple times.
+     Reads in the [Doxygen tag file][doxytag] ``<doxytagfile>`` and tries to
+     link tokens to their Doxygen documentation. synth will only try to link
+     tokens to their documentation if they would not be otherwise linked
+     directly to their declaration/definition in source. Additionally, synth
+     will add documentation links to definitions (those would not
+     normally be linked to source code because they don't refer to anything).
+
+     An interesting example Doxygen tagfile is the one for the C++ standard
+     library available at
+     <http://en.cppreference.com/w/Cppreference:Archives#Doxygen_tag_file>.
+
 
 ### Example
 
@@ -98,3 +110,4 @@ This project is licensed under the MIT license. See [LICENSE.txt](LICENSE.txt)
 
 
 [libclang]: http://clang.llvm.org/doxygen/group__CINDEX.html
+[doxytag]: https://www.stack.nl/~dimitri/doxygen/manual/external.html
