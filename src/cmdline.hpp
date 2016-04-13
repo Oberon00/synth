@@ -10,6 +10,9 @@ struct CmdLineArgs {
     std::vector<std::pair<char const*, char const*>> inOutDirs;
     char const* templateFile;
 
+    // first: Doxytag filename. second: Base URL.
+    std::vector<std::pair<char const*, char const*>> doxyTagFiles;
+
     int nClangArgs;
 
     // Extra-arguments if in CompilationDb mode, otherwise the whole cmdline.

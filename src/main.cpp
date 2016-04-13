@@ -1,4 +1,5 @@
 #include "CgStr.hpp"
+#include "DoxytagResolver.hpp"
 #include "MultiTuProcessor.hpp"
 #include "SimpleTemplate.hpp"
 #include "annotate.hpp"
@@ -194,13 +195,30 @@ static int executeCmdLine(CmdLineArgs const& args)
         tpl = SimpleTemplate(kDefaultTemplateText); 
     }
 
+    std::vector<ExternalRefLinker> refLinkers;
+    for (auto const& doxyMapping : args.doxyTagFiles) {
+        refLinkers.push_back(std::bind(&DoxytagResolver::link,
+            DoxytagResolver::fromTagFilename(
+                doxyMapping.first,
+                doxyMapping.second),
+            std::placeholders::_1, std::placeholders::_2));
+    }
+
     CgIdxHandle hcidx(clang_createIndex(
             /*excludeDeclarationsFromPCH:*/ true,
             /*displayDiagnostics:*/ true));
 
+
     MultiTuProcessor state(
-        PathMap(args.inOutDirs.begin(), args.inOutDirs.end()),
-        [](Markup&, CXCursor) {});
+        PathMap(args.inOutDirs.begin(), args.inOutDirs.end()), 
+        [&refLinkers](Markup& m, CXCursor c) {
+            assert(!m.isRef());
+            for (auto const& refLinker : refLinkers) {
+                refLinker(m, c);
+                if (m.isRef())
+                    break;
+            }
+        });
 
     if (args.compilationDbDir) {
         CXCompilationDatabase_Error err;
@@ -232,7 +250,7 @@ static int executeCmdLine(CmdLineArgs const& args)
 
         // It seems [1] that during creation of the first translation,
         // no others may be created or data races occur inside libclang.
-        // [1]: Detected by clangs TSan.
+        // [1]: Detected by clang's TSan.
         unsigned idx = 0;
         while (!processCompileCommand(
             clang_CompileCommands_getCommand(cmds.get(), idx++),

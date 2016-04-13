@@ -4,6 +4,7 @@
 
 set(libsynth_HDRS
     "CgStr.hpp"
+    "DoxytagResolver.hpp"
     "FileIdSupport.hpp"
     "MultiTuProcessor.hpp"
     "SimpleTemplate.hpp"
@@ -17,6 +18,7 @@ set(libsynth_HDRS
 )
 
 set(libsynth_SRCS
+    "DoxytagResolver.cpp"
     "MultiTuProcessor.cpp"
     "SimpleTemplate.cpp"
     "annotate.cpp"

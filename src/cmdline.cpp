@@ -54,6 +54,11 @@ CmdLineArgs CmdLineArgs::parse(int argc, char const* const* argv)
                     "-o without preceeding input directory");
             }
             getOptVal(argv + i++, r.inOutDirs.back().second);
+        } else if (!std::strcmp(argv[i], "--doxytags")) {
+            std::pair<char const*, char const*> tagOpts;
+            getOptVal(argv + i++, tagOpts.first);
+            getOptVal(argv + i++, tagOpts.second);
+            r.doxyTagFiles.push_back(std::move(tagOpts));
         } else if (!std::strcmp(argv[i], "--cmd")) {
             // These come before any extra-args, thus use insert(begin(), ...).
             r.clangArgs.insert(r.clangArgs.begin(), argv + i + 1, argv + argc);
