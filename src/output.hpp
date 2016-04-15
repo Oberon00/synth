@@ -88,12 +88,22 @@ constexpr TokenAttributes operator~ (TokenAttributes t)
 
 struct HighlightedFile;
 
-struct SourceLocation {
+struct SymbolDeclaration {
     HighlightedFile const* file;
-    unsigned lineno;
+    unsigned lineno; // 0: Whole file referenced. Implies fileUniueName.empty().
+    std::string fileUniqueName; // Can be empty.
 
     bool valid() const { return file != nullptr; }
 };
+
+inline bool operator== (
+    SymbolDeclaration const& lhs, SymbolDeclaration const& rhs)
+{
+    return lhs.lineno == rhs.lineno
+        && lhs.file == rhs.file
+        && lhs.fileUniqueName == rhs.fileUniqueName;
+}
+
 
 class MultiTuProcessor;
 
@@ -105,6 +115,8 @@ struct Markup {
     unsigned endOffset;
 
     TokenAttributes attrs;
+
+    std::string const* fileUniqueName;
 
     CodeRef refd;
 
@@ -125,6 +137,6 @@ struct HighlightedFile {
     void writeTo(std::ostream& out, MultiTuProcessor& multiTuProcessor);
 };
 
-}
+} // namespace synth
 
 #endif

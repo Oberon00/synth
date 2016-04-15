@@ -84,12 +84,12 @@ HighlightedFile* MultiTuProcessor::prepareToProcess(CXFile f)
     return &fentry->hlFile;
 }
 
-HighlightedFile const* MultiTuProcessor::referenceFilename(CXFile f)
+void synth::MultiTuProcessor::registerDef(
+    std::string && usr, SymbolDeclaration const* def)
 {
-    FileEntry* fentry = obtainFileEntry(f);
-    return fentry ? &fentry->hlFile : nullptr;
+    std::lock_guard<std::mutex> lock(m_mut);
+    m_defs.insert({ std::move(usr), std::move(def) });
 }
-
 
 FileEntry* MultiTuProcessor::obtainFileEntry(CXFile f)
 {

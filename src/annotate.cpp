@@ -151,7 +151,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
     else if (tk == CXToken_Keyword
         && (k == CXCursor_FunctionDecl || k == CXCursor_CXXMethod)
         && sp == "operator"
-        ) {
+    ) {
         state.lnkPending = true;
         return;
     }
@@ -164,8 +164,9 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         m->attrs |= TokenAttributes::flagDef;
         CgStr usr(clang_getCursorUSR(cur));
         if (!usr.empty()) {
-            SourceLocation decl{ &state.hlFile, lineno };
-            state.multiTuProcessor.registerDef(usr.get(), std::move(decl));
+            SymbolDeclaration const* decl = state.multiTuProcessor.referenceSymbol(
+                &state.hlFile, lineno, m->beginOffset, []() { return std::string(); });
+            state.multiTuProcessor.registerDef(usr.get(), decl);
         }
     }
 

@@ -8,6 +8,11 @@
 
 using namespace synth;
 
+static std::string makeEmptyString()
+{
+    return std::string();
+}
+
 static std::string relativeUrl(fs::path const& from, fs::path const& to)
 {
     if (to == from)
@@ -17,44 +22,43 @@ static std::string relativeUrl(fs::path const& from, fs::path const& to)
 }
 
 static std::string locationUrl(
-    fs::path const& outPath, SourceLocation const& dst)
+    fs::path const& outPath, SymbolDeclaration const& dst)
 {
     std::string r = relativeUrl(outPath, dst.file->dstPath());
-    if (dst.lineno != 0) {
+    if (!dst.fileUniqueName.empty()) {
+        r.reserve(r.size() + 1 + dst.fileUniqueName.size());
+        r += '#';
+        r += dst.fileUniqueName;
+    } else if (dst.lineno != 0) {
         r += "#L";
         r += std::to_string(dst.lineno);
     }
     return r;
 }
 
-static void linkCursorIfIncludedDst(
-    Markup& m, CXCursor dst, MultiTuProcessor& state)
+static void linkSymbol(Markup& m, SymbolDeclaration const* sym)
 {
-    CXFile file;
-    unsigned lineno;
-    clang_getFileLocation(
-        clang_getCursorLocation(dst), &file, &lineno, nullptr, nullptr);
-    HighlightedFile const* hlFile = state.referenceFilename(file);
-    if (!hlFile)
+    if (!sym)
         return;
-    m.refd = [hlFile, lineno](fs::path const& outPath, MultiTuProcessor&) {
-        return locationUrl(outPath, { hlFile, lineno });
+    m.refd = [sym](fs::path const& outPath, MultiTuProcessor&) {
+        return locationUrl(outPath, *sym);
     };
 }
 
-static void linkInclude(
-    Markup& m,
-    CXCursor incCursor,
-    MultiTuProcessor& state)
+static void linkDeclCursor(Markup& m, CXCursor decl, MultiTuProcessor& state)
+{
+    CXFile file;
+    unsigned lineno, offset;
+    clang_getFileLocation(
+        clang_getCursorLocation(decl), &file, &lineno, nullptr, &offset);
+    linkSymbol(
+        m, state.referenceSymbol(file, offset, lineno, &makeEmptyString));
+}
+
+static void linkInclude(Markup& m, CXCursor incCursor, MultiTuProcessor& state)
 {
     CXFile file = clang_getIncludedFile(incCursor);
-    HighlightedFile const* hlFile = state.referenceFilename(file);
-    if (!hlFile)
-        return;
-    m.refd = [hlFile](fs::path const& outPath, MultiTuProcessor&)
-    {
-        return locationUrl(outPath, { hlFile, 0 });
-    };
+    linkSymbol(m, state.referenceSymbol(file, UINT_MAX, 0, &makeEmptyString));
 }
 
 static void linkExternalDef(Markup& m, CXCursor cur, MultiTuProcessor& state)
@@ -66,9 +70,9 @@ static void linkExternalDef(Markup& m, CXCursor cur, MultiTuProcessor& state)
     m.refd = [usr = hUsr.copy(), extRef = std::move(m.refd)] (
         fs::path const& outPath, MultiTuProcessor& state_)
     {
-        SourceLocation const* loc = state_.findMissingDef(usr);
-        if (loc)
-            return locationUrl(outPath, *loc);
+        SymbolDeclaration const* sym = state_.findMissingDef(usr);
+        if (sym)
+            return locationUrl(outPath, *sym);
         if (extRef)
             return extRef(outPath, state_);
         return std::string();
@@ -91,7 +95,7 @@ void synth::linkCursor(Markup& m, CXCursor cur, MultiTuProcessor& state)
             && !clang_equalCursors(cur, referenced);
         shouldRef = isref;
         if (isref) {
-            linkCursorIfIncludedDst(m, referenced, state);
+            linkDeclCursor(m, referenced, state);
         } else if (
             (m.attrs & (TokenAttributes::flagDef | TokenAttributes::flagDecl))
             != TokenAttributes::none

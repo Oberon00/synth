@@ -95,13 +95,18 @@ static bool writeBeginTag(
     if (href.empty()) {
         out << "span";
     } else {
-        out << "a href=\"" << href << "\" ";
+        out << "a href=\"" << href << "\"";
     }
 
     if (m.attrs != TokenAttributes::none) {
-        out << "class=\"";
+        out << " class=\"";
         writeCssClasses(m.attrs, out);
-        out << "\" ";
+        out << '\"';
+    }
+    
+    if (m.fileUniqueName) {
+        assert(!m.fileUniqueName->empty());
+        out << " id=\"" << m.fileUniqueName << '\"';
     }
     out << '>';
 
