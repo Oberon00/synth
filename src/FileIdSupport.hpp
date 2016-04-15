@@ -4,24 +4,18 @@
 #include <clang-c/Index.h>
 #include <algorithm>
 #include <functional>
+#include <boost/functional/hash/hash.hpp>
 
 namespace std {
     template <>
     struct hash<CXFileUniqueID> {
         std::size_t operator() (CXFileUniqueID const& uid) const {
-            int nelems = sizeof(uid.data) / sizeof(uid.data[0]);
-            std::size_t h = std::hash<unsigned long long>()(uid.data[0]);
+            int constexpr nelems = sizeof(uid.data) / sizeof(uid.data[0]);
+            std::hash<unsigned long long> hasher;
+            std::size_t h = hasher(uid.data[0]);
             for (int i = 1; i < nelems; ++i)
-                hash_combine(h, uid.data[i]);
+                boost::hash_combine(h, hasher(uid.data[i]));
             return h;
-        }
-    private:
-        // From boost.
-        template <class T>
-        static void hash_combine(std::size_t& seed, const T& v)
-        {
-            std::hash<T> hasher;
-            seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
         }
     };
 
