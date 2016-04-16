@@ -124,7 +124,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
     }
     else if (!equalFileLocations(
         clang_getRangeStart(rng), clang_getCursorLocation(cur))
-        ) {
+    ) {
         // Note that there is magic in the offset with which equalFileLocations
         // works (and clang_equalLocations too); it is sometimes different from
         // what line:column would suggest. Otherwise this condition would not
@@ -145,6 +145,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         return;
     }
     else if (k == CXCursor_Destructor) {
+        // This is the "~" of a dtor. Include the next part in the link.
         state.lnkPending = true;
         return;
     }
@@ -156,18 +157,34 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         return;
     }
 
-    if (clang_isDeclaration(k))
+    SymbolDeclaration const* decl = nullptr;
+    auto const loadDecl = [&]() {
+        if (decl)
+            return;
+        decl = state.multiTuProcessor.referenceSymbol(
+            &state.hlFile,
+            lineno,
+            m->beginOffset,
+            [&cur]() { return fileUniqueName(cur); });
+
+        // This dereference is safe even if other threads modify decl since it
+        // is basically just pointer arithmetic.
+        m->fileUniqueName = &decl->fileUniqueName;
+    };
+
+    if (clang_isDeclaration(k)) {
         m->attrs |= TokenAttributes::flagDecl;
+        if (isMainCursor(cur))
+            loadDecl();
+    }
 
     CXCursor defcur = clang_getCursorDefinition(cur);
     if (clang_equalCursors(defcur, cur)) { // This is a definition:
         m->attrs |= TokenAttributes::flagDef;
+        loadDecl();
         CgStr usr(clang_getCursorUSR(cur));
-        if (!usr.empty()) {
-            SymbolDeclaration const* decl = state.multiTuProcessor.referenceSymbol(
-                &state.hlFile, lineno, m->beginOffset, []() { return std::string(); });
+        if (!usr.empty())
             state.multiTuProcessor.registerDef(usr.get(), decl);
-        }
     }
 
     linkCursor(*m, cur, state.multiTuProcessor);

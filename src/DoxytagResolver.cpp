@@ -3,6 +3,7 @@
 #include "CgStr.hpp"
 #include "output.hpp"
 #include "debug.hpp"
+#include "xref.hpp"
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -28,19 +29,6 @@ static boost::optional<std::string> getUrl(ptree::ptree const& elem)
     return r;
 }
 
-static std::string doxyName(CXCursor cur)
-{
-    CXCursorKind k = clang_getCursorKind(cur);
-    if (clang_isInvalid(k) || clang_isTranslationUnit(k))
-        return std::string();
-    CXCursor parent = clang_getCursorSemanticParent(cur);
-    CgStr sp(clang_getCursorSpelling(cur));
-    if (sp.empty())
-        return doxyName(parent);
-    std::string name = doxyName(parent);
-    return name.empty() ? sp.get() : std::move(name) + "::" + sp.get();
-}
-
 DoxytagResolver::DoxytagResolver(ptree::ptree const& tagFileDom, boost::string_ref baseUrl)
     : m_baseUrl(baseUrl)
 {
@@ -55,7 +43,8 @@ DoxytagResolver::DoxytagResolver(ptree::ptree const& tagFileDom, boost::string_r
     }
 }
 
-DoxytagResolver DoxytagResolver::fromTagFilename(fs::path const& fname, boost::string_ref baseUrl)
+DoxytagResolver DoxytagResolver::fromTagFilename(
+    fs::path const& fname, boost::string_ref baseUrl)
 {
     ptree::ptree dom;
     fs::ifstream file(fname);
@@ -72,10 +61,10 @@ DoxytagResolver DoxytagResolver::fromTagFilename(fs::path const& fname, boost::s
 void DoxytagResolver::link(Markup & m, CXCursor cur)
 {
     CXCursor refd = clang_getCursorReferenced(cur);
-    //if (clang_getCursorLinkage(refd) == CXLinkage_NoLinkage)
-    //    return;
-    auto dxn = doxyName(refd);
-    auto it = m_dsts.find(dxn);
+    if (!isNamespaceLevelDeclaration(refd))
+        return;
+    auto doxyName = simpleQualifiedName(refd);
+    auto it = m_dsts.find(doxyName);
     if (it == m_dsts.end())
         return;
     m.refd = [&dst = it->second, &baseUrl = m_baseUrl] (
@@ -100,7 +89,7 @@ void synth::DoxytagResolver::parseCompound(
 }
 
 std::string const* synth::DoxytagResolver::addTag(
-    ptree::ptree const & tag, std::string const & prefix)
+    ptree::ptree const& tag, std::string const& prefix)
 {
     auto name = tag.get_optional<std::string>("name");
     if (!name)

@@ -12,7 +12,7 @@ using namespace synth;
 
 unsigned const kMaxRefRecursion = 16;
 
-static bool isTypeKind(CXCursorKind k)
+bool synth::isTypeCursorKind(CXCursorKind k)
 {
     SYNTH_DISCLANGWARN_BEGIN("-Wswitch-enum")
     switch (k) {
@@ -36,6 +36,27 @@ static bool isTypeKind(CXCursorKind k)
         case CXCursor_ObjCProtocolRef:
         case CXCursor_ObjCClassRef:
         case CXCursor_CXXBaseSpecifier:
+            return true;
+
+        default:
+            return false;
+    }
+    SYNTH_DISCLANGWARN_END
+}
+
+bool synth::isFunctionCursorKind(CXCursorKind k)
+{
+    SYNTH_DISCLANGWARN_BEGIN("-Wswitch-enum")
+    switch (k) {
+        case CXCursor_FunctionDecl:
+        case CXCursor_ObjCInstanceMethodDecl:
+        case CXCursor_ObjCClassMethodDecl:
+        case CXCursor_CXXMethod:
+        case CXCursor_FunctionTemplate:
+        case CXCursor_Constructor:
+        case CXCursor_Destructor:
+        case CXCursor_ConversionFunction:
+        case CXCursor_OverloadedDeclRef:
             return true;
 
         default:
@@ -155,8 +176,10 @@ static TokenAttributes getTokenAttributesImpl(
         }
 
         case CXToken_Identifier:
-            if (isTypeKind(k))
+            if (isTypeCursorKind(k))
                 return TokenAttributes::ty;
+            if (isFunctionCursorKind(k))
+                return TokenAttributes::func;
             SYNTH_DISCLANGWARN_BEGIN("-Wswitch-enum")
             switch (k) {
                 case CXCursor_MemberRef:
@@ -199,17 +222,6 @@ static TokenAttributes getTokenAttributesImpl(
                 case CXCursor_EnumConstantDecl:
                 case CXCursor_NonTypeTemplateParameter:
                     return TokenAttributes::constant;
-
-                case CXCursor_FunctionDecl:
-                case CXCursor_ObjCInstanceMethodDecl:
-                case CXCursor_ObjCClassMethodDecl:
-                case CXCursor_CXXMethod:
-                case CXCursor_FunctionTemplate:
-                case CXCursor_Constructor:
-                case CXCursor_Destructor:
-                case CXCursor_ConversionFunction:
-                case CXCursor_OverloadedDeclRef:
-                    return TokenAttributes::func;
 
                 case CXCursor_VarDecl:
                     return getVarTokenAttributes(cur);
