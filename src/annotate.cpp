@@ -44,15 +44,9 @@ static unsigned getLocOffset(CXSourceLocation loc)
 
 namespace {
 
-struct FileState {
-    HighlightedFile& hlFile;
-    MultiTuProcessor& multiTuProcessor;
-    bool lnkPending;
-};
-
 struct FileAnnotationState {
     CXFile file;
-    HighlightedFile* hlFile;
+    HighlightedFile& hlFile;
     CgTokensHandle tokens;
     std::vector<CXCursor> annotations;
     std::vector<bool> annotationBad;
@@ -72,6 +66,21 @@ struct FileAnnotationState {
 
 using TuAnnotationMap = std::unordered_map<CXFileUniqueID, FileAnnotationState>;
 
+struct TuState {
+    TuAnnotationMap annotationMap;
+    CXTranslationUnit tu;
+    MultiTuProcessor& multiTuProcessor;
+    bool isC;
+};
+
+struct FileState {
+    TuState& tuState;
+    HighlightedFile& hlFile;
+    bool lnkPending;
+};
+
+} // anonymous namespace
+
 static FileAnnotationState* lookupFileAnnotations(TuAnnotationMap& m, CXFile f)
 {
     CXFileUniqueID fuid;
@@ -80,8 +89,6 @@ static FileAnnotationState* lookupFileAnnotations(TuAnnotationMap& m, CXFile f)
     auto it = m.find(fuid);
     return it == m.end() ? nullptr : &it->second;
 }
-
-} // anonymous namespace
 
 static void processToken(FileState& state, CXToken tok, CXCursor cur)
 {
@@ -139,7 +146,8 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         CXSourceRange incrng = clang_getCursorExtent(cur);
         incLnk.beginOffset = getLocOffset(clang_getRangeStart(incrng));
         incLnk.endOffset = getLocOffset(clang_getRangeEnd(incrng));
-        linkCursor(incLnk, cur, state.multiTuProcessor);
+        linkCursor(
+            incLnk, cur, state.tuState.multiTuProcessor, state.tuState.isC);
         if (incLnk.isRef())
             state.hlFile.markups.push_back(std::move(incLnk));
         return;
@@ -161,11 +169,11 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
     auto const loadDecl = [&]() {
         if (decl)
             return;
-        decl = state.multiTuProcessor.referenceSymbol(
+        decl = state.tuState.multiTuProcessor.referenceSymbol(
             &state.hlFile,
             lineno,
             m->beginOffset,
-            [&cur]() { return fileUniqueName(cur); });
+            [&]() { return fileUniqueName(cur, state.tuState.isC); });
 
         // This dereference is safe even if other threads modify decl since it
         // is basically just pointer arithmetic.
@@ -184,32 +192,25 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         loadDecl();
         CgStr usr(clang_getCursorUSR(cur));
         if (!usr.empty())
-            state.multiTuProcessor.registerDef(usr.get(), decl);
+            state.tuState.multiTuProcessor.registerDef(usr.get(), decl);
     }
 
-    linkCursor(*m, cur, state.multiTuProcessor);
+    linkCursor(*m, cur, state.tuState.multiTuProcessor, state.tuState.isC);
 }
-
-namespace {
-
-struct IncVisitorData {
-    MultiTuProcessor& multiTuProcessor;
-    CXTranslationUnit tu;
-    TuAnnotationMap& annotationMap;
-};
-
-} // anonymous namespace
-
 
 static CXChildVisitResult annotateVisit(
     CXCursor c, CXCursor, CXClientData ud)
 {
-    auto& amap = *static_cast<TuAnnotationMap*>(ud);
+    auto& state = *static_cast<TuState*>(ud);
+    if (state.isC) {
+        CXLanguageKind lang = clang_getCursorLanguage(c);
+        state.isC = lang == CXLanguage_C || lang == CXLanguage_Invalid;
+    }
     CXFile f;
     unsigned off;
     clang_getFileLocation(
         clang_getCursorLocation(c), &f, nullptr, nullptr, &off);
-    FileAnnotationState* astate = lookupFileAnnotations(amap, f);
+    FileAnnotationState* astate = lookupFileAnnotations(state.annotationMap, f);
     if (!astate)
         return CXChildVisit_Continue; // Should we use Recurse here?
 
@@ -225,9 +226,9 @@ static CXChildVisitResult annotateVisit(
     return CXChildVisit_Recurse;
 }
 
-static void annotate(TuAnnotationMap& map, CXCursor root)
+static void annotate(TuState& state, CXCursor root)
 {
-    clang_visitChildren(root, &annotateVisit, &map);
+    clang_visitChildren(root, &annotateVisit, &state);
 }
 
 static void processFile(
@@ -237,13 +238,13 @@ static void processFile(
     if (clang_getFileUniqueID(file, &fuid) != 0)
         return;
 
-    auto& cdata = *static_cast<IncVisitorData*>(ud);
-    CXTranslationUnit tu = cdata.tu;
+    auto& state = *static_cast<TuState*>(ud);
+    CXTranslationUnit tu = state.tu;
 
     CXSourceLocation beg = clang_getLocationForOffset(tu, file, 0);
     CXSourceLocation end = clang_getLocation(tu, file, UINT_MAX, UINT_MAX);
 
-    HighlightedFile* hlFile = cdata.multiTuProcessor.prepareToProcess(file);
+    HighlightedFile* hlFile = state.multiTuProcessor.prepareToProcess(file);
     if (!hlFile)
         return;
 
@@ -274,36 +275,35 @@ static void processFile(
 
     FileAnnotationState fstate {
         std::move(file),
-        std::move(hlFile),
+        *hlFile,
         std::move(hToks),
         std::move(annotations),
         std::move(annotationBad),
         std::unordered_map<unsigned, std::size_t>()
     };
     auto kv = std::make_pair(std::move(fuid), std::move(fstate));
-    auto insRes = cdata.annotationMap.insert(std::move(kv));
+    auto insRes = state.annotationMap.insert(std::move(kv));
     assert(insRes.second);
     insRes.first->second.populateLocationMap(tu);
 }
 
-static void writeHlTokens(
-    TuAnnotationMap& annotations, MultiTuProcessor& multiTuProcessor)
+static void writeHlTokens(TuState& state)
 {
-    for (auto& fAnnotationsEntry : annotations) {
+    for (auto& fAnnotationsEntry : state.annotationMap) {
         FileAnnotationState& fAnnotations = fAnnotationsEntry.second;
-        FileState fstate {*fAnnotations.hlFile, multiTuProcessor, false};
+        FileState fstate {state, fAnnotations.hlFile, /*lnkPending=*/false};
         for (std::size_t i = 0; i < fAnnotations.tokens.size(); ++i) {
             CXToken tok = fAnnotations.tokens.tokens()[i];
             CXCursor cur = fAnnotations.annotations[i];
             processToken(fstate, tok, cur);
         }
-        fAnnotations.hlFile->markups.shrink_to_fit();
+        fAnnotations.hlFile.markups.shrink_to_fit();
     }
 }
 
 int synth::processTu(
     CXIndex cidx,
-    MultiTuProcessor& state,
+    MultiTuProcessor& multiTuProcessor,
     char const* const* args,
     int nargs)
 {
@@ -329,11 +329,10 @@ int synth::processTu(
         return err + 10;
     }
 
-    TuAnnotationMap annotations;
-    IncVisitorData ud {state, tu, annotations};
-    clang_getInclusions(tu, &processFile, &ud);
-    annotate(annotations, clang_getTranslationUnitCursor(tu));
-    writeHlTokens(annotations, state);
+    TuState state {TuAnnotationMap(), tu, multiTuProcessor, /*isC=*/ true};
+    clang_getInclusions(tu, &processFile, &state);
+    annotate(state, clang_getTranslationUnitCursor(tu));
+    writeHlTokens(state);
 
     return EXIT_SUCCESS;
 }

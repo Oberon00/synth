@@ -44,14 +44,14 @@ static void linkSymbol(Markup& m, SymbolDeclaration const* sym)
     };
 }
 
-static void linkDeclCursor(Markup& m, CXCursor decl, MultiTuProcessor& state)
+static void linkDeclCursor(Markup& m, CXCursor decl, MultiTuProcessor& state, bool isC)
 {
     CXFile file;
     unsigned lineno, offset;
     clang_getFileLocation(
         clang_getCursorLocation(decl), &file, &lineno, nullptr, &offset);
     linkSymbol(m, state.referenceSymbol(
-        file, lineno, offset, [&decl]() { return fileUniqueName(decl); }));
+        file, lineno, offset, [&]() { return fileUniqueName(decl, isC); }));
 }
 
 static void linkInclude(Markup& m, CXCursor incCursor, MultiTuProcessor& state)
@@ -79,7 +79,7 @@ static void linkExternalDef(Markup& m, CXCursor cur, MultiTuProcessor& state)
     };
 }
 
-void synth::linkCursor(Markup& m, CXCursor cur, MultiTuProcessor& state)
+void synth::linkCursor(Markup& m, CXCursor cur, MultiTuProcessor& state, bool isC)
 {
     CXCursorKind k = clang_getCursorKind(cur);
     bool shouldRef = false;
@@ -95,7 +95,7 @@ void synth::linkCursor(Markup& m, CXCursor cur, MultiTuProcessor& state)
             && !clang_equalCursors(cur, referenced);
         shouldRef = isref;
         if (isref) {
-            linkDeclCursor(m, referenced, state);
+            linkDeclCursor(m, referenced, state, isC);
         } else if (
             (m.attrs & (TokenAttributes::flagDef | TokenAttributes::flagDecl))
             != TokenAttributes::none
@@ -110,29 +110,51 @@ void synth::linkCursor(Markup& m, CXCursor cur, MultiTuProcessor& state)
         state.linkExternalRef(m, std::move(cur));
 }
 
-std::string synth::fileUniqueName(CXCursor cur)
+std::string synth::fileUniqueName(CXCursor cur, bool isC)
 {
     if (!isNamespaceLevelDeclaration(cur))
         return std::string();
     if (!isMainCursor(cur))
         return std::string();
     CXCursorKind k = clang_getCursorKind(cur);
-    if (isTypeCursorKind(k)
-        || k == CXCursor_VarDecl
-        || k == CXCursor_EnumConstantDecl
-    ) {
+    if (k == CXCursor_VarDecl || k == CXCursor_EnumConstantDecl)
         return simpleQualifiedName(cur);
+    if (isTypeCursorKind(k)) {
+        if (!isC)
+            return simpleQualifiedName(cur);
+
+        // C allows to have struct S and another non-struct symbol S at the
+        // same time. They are distinguished by writing struct in front e.g.
+        // "void S(struct S arg) { /* ... */ }"
+        // A common pattern is thus "typedef struct S { } S;" We need to make
+        // sure that we handle that correctly.
+        // Same goes for enum and union.
+        std::string r;
+        SYNTH_DISCLANGWARN_BEGIN("-Wswitch-enum")
+        switch (k) {
+            case CXCursor_StructDecl:
+                r = 's';
+                break;
+            case CXCursor_EnumDecl:
+                r = 'e';
+                break;
+            case CXCursor_UnionDecl:
+                r = 'u';
+                break;
+            case CXCursor_TypedefDecl:
+                break;
+            default:
+                assert("unreachable" && false);
+        }
+        SYNTH_DISCLANGWARN_END
+        if (!r.empty())
+            r += ':';
+        r += CgStr(clang_getCursorSpelling(cur)).gets();
+        return r;
     }
     if (isFunctionCursorKind(k)) {
-        // Calling clang_Cursor_getTranslationUnit directly on cur erratically
-        // returns CXLanguage_C sometimes (e.g. for static functions), thus
-        // call it on the TU cursor.
-        CXLanguageKind tuLang = clang_getCursorLanguage(
-            clang_getTranslationUnitCursor(
-                clang_Cursor_getTranslationUnit(cur)));
-        if (tuLang == CXLanguage_C) {
+        if (isC)
             return CgStr(clang_getCursorSpelling(cur)).gets();
-        }
 
         std::string r = simpleQualifiedName(cur);
         CXType ty = clang_getCursorType(cur);
