@@ -4,6 +4,7 @@
 
 #include <boost/assert.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/utility/string_ref.hpp>
 
 #include <climits>
 #include <utility>
@@ -21,6 +22,35 @@ fs::path HighlightedFile::dstPath() const
 {
     fs::path r = inOutDir->second / fname;
     r += ".html";
+    return r;
+}
+
+static boost::string_ref htmlEscape(char const& c, bool inAttr)
+{
+    switch (c) {
+        case '<':
+            if (!inAttr)
+                return "&lt;";
+            break;
+        // Note: '>' does not need to be escaped.
+        case '&':
+            return "&amp;";
+        case '"':
+            if (inAttr)
+                return "&quot;";
+            break;
+    }
+    return boost::string_ref(&c, 1);
+}
+
+static std::string htmlEscape(boost::string_ref s, bool inAttr)
+{
+    std::string r;
+    r.reserve(s.size());
+    for (char c : s) {
+        boost::string_ref escaped = htmlEscape(c, inAttr);
+        r.append(escaped.data(), escaped.size());
+    }
     return r;
 }
 
@@ -95,6 +125,7 @@ static bool writeBeginTag(
     if (href.empty()) {
         out << "span";
     } else {
+        href = htmlEscape(std::move(href), /*inAttr:*/ true);
         out << "a href=\"" << href << "\"";
     }
 
@@ -104,9 +135,9 @@ static bool writeBeginTag(
         out << '\"';
     }
     
-    if (m.fileUniqueName) {
-        assert(!m.fileUniqueName->empty());
-        out << " id=\"" << m.fileUniqueName << '\"';
+    if (m.fileUniqueName && !m.fileUniqueName->empty()) {
+        out << " id=\""
+            << htmlEscape(*m.fileUniqueName, /*inAttr:*/ true) << '\"';
     }
     out << '>';
 
@@ -182,20 +213,11 @@ static bool copyWithLinenosUntil(OutputState& state, unsigned offset)
                     }
                 } break;
 
-                case '<':
-                    state.out << "&lt;";
-                    break;
-                case '>':
-                    state.out << "&gt;";
-                    break;
-                case '&':
-                    state.out << "&amp;";
-                    break;
                 case '\r':
                     // Discard.
                     break;
                 default:
-                    state.out.put(static_cast<char>(ch));
+                    state.out << htmlEscape(static_cast<char>(ch), false);
                     break;
             }
         }
