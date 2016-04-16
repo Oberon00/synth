@@ -8,6 +8,19 @@
 using namespace synth;
 
 static char const kTokenKindChrs[] = "pkilc";
+static char const* const kLinkageSpellings[] = {
+    "Invalid",
+    "NoLinkage",
+    "Internal",
+    "UniqueExternal",
+    "External"
+};
+static char const* const kLangSpellings[] = {
+    "Invalid",
+    "C",
+    "ObjC",
+    "C++"
+};
 
 static void dumpToken(
     CXTranslationUnit tu, CXToken tok, CXFile f = nullptr)
@@ -16,6 +29,25 @@ static void dumpToken(
     std::clog << '"' << CgStr(clang_getTokenSpelling(tu, tok)) << "\" ";
     CXSourceRange tokExt = clang_getTokenExtent(tu, tok);
     writeExtent(std::clog, tokExt, f);
+}
+
+// Returns decl
+static std::pair<CXType, CXCursor> dumpType(CXType ty, CXCursor ref)
+{
+
+    if (ty.kind == CXType_Invalid) {
+        return {
+            clang_getCursorType(clang_getNullCursor()),
+            clang_getNullCursor()
+        };
+    }
+    std::clog << CgStr(clang_getTypeKindSpelling(ty.kind))
+        << ' ' << CgStr(clang_getTypeSpelling(ty));
+    CXCursor decl = clang_getTypeDeclaration(ty);
+    if (!clang_equalCursors(ref, decl))
+        std::clog << " @ " << decl;
+    std::clog << '\n';
+    return {ty, decl};
 }
 
 static void dumpAnnotatedToken(
@@ -32,12 +64,27 @@ static void dumpAnnotatedToken(
         CgStr usr = clang_getCursorUSR(cur);
         if (!usr.empty())
             std::clog << "    U: " << usr << '\n';
-        CXType ty = clang_getCursorType(cur);
-        if (ty.kind != CXType_Invalid) {
-            std::clog
-                << "    T: " << CgStr(clang_getTypeKindSpelling(ty.kind))
-                << ' ' << CgStr(clang_getTypeSpelling(ty)) << '\n';
+        std::clog << "    T: ";
+        auto tyWithDecl = dumpType(clang_getCursorType(cur), cur);
+        CXType canonTy = clang_getCanonicalType(tyWithDecl.first);
+        if (!clang_equalTypes(tyWithDecl.first, canonTy)) {
+            std::clog << "    CT: ";
+            dumpType(canonTy, tyWithDecl.second);
         }
+        CXLinkageKind linkage = clang_getCursorLinkage(cur);
+        if (linkage != CXLinkage_Invalid)
+            std::clog << "    Lnk: " << kLinkageSpellings[linkage];
+        CXLanguageKind lang = clang_getCursorLanguage(cur);
+        if (lang != CXLanguage_Invalid)
+            std::clog << "   Lng: " << kLangSpellings[lang];
+        if (lang != CXLanguage_Invalid || linkage != CXLinkage_Invalid)
+            std::clog << '\n';
+        CXCursor canon = clang_getCanonicalCursor(cur);
+        if (!clang_equalCursors(cur, canon))
+            std::clog << "    Can: " << canon << '\n';
+        CXCursor def = clang_getCursorDefinition(cur);
+        if (!clang_equalCursors(cur, def))
+            std::clog << "    Def: " << def << '\n';
     }
     CXCursor c2 = clang_getCursor(tu, clang_getTokenLocation(tu, tok));
     if (!clang_equalCursors(cur, c2))
