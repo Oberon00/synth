@@ -187,7 +187,7 @@ static bool copyWithLinenosUntil(OutputState& state, unsigned offset)
 {
     if (state.lineno == 0) {
         ++state.lineno;
-        state.out << "<span id=\"L1\" class=\"Ln\">";
+        state.out << "<span id=\"" << lineId(1) << "\" class=\"Ln\">";
     }
 
     while (state.in && state.in.tellg() < offset) {
@@ -201,8 +201,8 @@ static bool copyWithLinenosUntil(OutputState& state, unsigned offset)
                     writeAllEnds(state.out, state.activeTags);
                     ++state.lineno;
                     state.out
-                        << "</span>\n<span id=\"L" 
-                        << state.lineno
+                        << "</span>\n<span id=\"" 
+                        << lineId(state.lineno)
                         << "\" class=\"Ln\">";
 
                     for (auto const& mi : state.activeTags) {

@@ -104,7 +104,6 @@ inline bool operator== (
         && lhs.fileUniqueName == rhs.fileUniqueName;
 }
 
-
 class MultiTuProcessor;
 
 // return.empty(): No reference.
@@ -136,6 +135,11 @@ struct HighlightedFile {
 
     void writeTo(std::ostream& out, MultiTuProcessor& multiTuProcessor);
 };
+
+inline std::string lineId(unsigned lineno)
+{
+    return std::to_string(lineno) + "L";
+}
 
 } // namespace synth
 

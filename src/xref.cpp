@@ -83,8 +83,10 @@ static std::string locationUrl(
         r += '#';
         r += dst.fileUniqueName;
     } else if (dst.lineno != 0) {
-        r += "#L";
-        r += std::to_string(dst.lineno);
+        std::string anchor = lineId(dst.lineno);
+        r.reserve(r.size() + 1 + anchor.size());
+        r += "#";
+        r += std::move(anchor);
     }
     return r;
 }
