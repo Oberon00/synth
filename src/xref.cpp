@@ -47,6 +47,25 @@ static std::pair<bool, CXCursor> typeAliasRedeclares(CXCursor decl)
     return {aliasQName == canonQName, canonDecl};
 }
 
+// Returns clang_getCursorReferenced(cur), unless the referenced cursor is a
+// type alias or typedef used in an occurence of the "typedef struct S { } S;"
+// pattern. In this case, it returns the declaration cursor of the struct
+// instead of the type alias.
+static CXCursor effectiveReferencedCursor(CXCursor cur)
+{
+    CXCursor refd = clang_getCursorReferenced(cur);
+    CXCursorKind k = clang_getCursorKind(refd);
+    if (k != CXCursor_TypedefDecl && k != CXCursor_TypeAliasDecl)
+        return refd;
+    CXCursor tyRefd = clang_getCursorReferenced(refd);
+    if (!clang_equalCursors(refd, tyRefd))
+        return refd;
+    
+    auto sameAndCanon = typeAliasRedeclares(refd);
+    return sameAndCanon.first ? sameAndCanon.second : refd;
+}
+
+
 static std::string relativeUrl(fs::path const& from, fs::path const& to)
 {
     if (to == from)
@@ -123,9 +142,7 @@ void synth::linkCursor(Markup& m, CXCursor cur, MultiTuProcessor& state, bool is
         linkInclude(m, cur, state);
         shouldRef = true;
     } else {
-        // clang_isReference() sometimes reports false negatives, e.g. for
-        // overloaded operators, so check manually.
-        CXCursor referenced = clang_getCursorReferenced(cur);
+        CXCursor referenced = effectiveReferencedCursor(cur);
         bool isref = !clang_Cursor_isNull(referenced)
             && !clang_equalCursors(cur, referenced);
         shouldRef = isref;
