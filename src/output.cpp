@@ -243,6 +243,10 @@ void HighlightedFile::writeTo(
             m, state.outPath, state.multiTuProcessor, out);
         activeTags.push_back({ &m, wasRef });
     }
+    while (!activeTags.empty()) {
+        copyWithLinenosUntilNoEof(state, activeTags.back().markup->endOffset);
+        writeEndTag(activeTags.back(), out);
+        activeTags.pop_back();
+    }
     BOOST_VERIFY(!copyWithLinenosUntil(state, UINT_MAX));
-    writeAllEnds(out, activeTags);
 }
