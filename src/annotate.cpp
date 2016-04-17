@@ -126,10 +126,10 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         Markup lnk = {};
         lnk.beginOffset = getLocOffset(clang_getCursorLocation(cur));
         lnk.endOffset = m->endOffset;
+        assert(lnk.beginOffset < lnk.endOffset);
         markups.push_back(std::move(lnk));
         m = &markups.back();
-    }
-    else if (!equalFileLocations(
+    } else if (!equalFileLocations(
         clang_getRangeStart(rng), clang_getCursorLocation(cur))
     ) {
         // Note that there is magic in the offset with which equalFileLocations
@@ -140,8 +140,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         // declaration according to line:column, but at the function name (or
         // operator keyword or dtor tilde) according to the offset.
         return;
-    }
-    else if (k == CXCursor_InclusionDirective) {
+    } else if (k == CXCursor_InclusionDirective) {
         Markup incLnk = {};
         CXSourceRange incrng = clang_getCursorExtent(cur);
         incLnk.beginOffset = getLocOffset(clang_getRangeStart(incrng));
@@ -151,49 +150,56 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         if (incLnk.isRef())
             state.hlFile.markups.push_back(std::move(incLnk));
         return;
-    }
-    else if (k == CXCursor_Destructor) {
+    } else if (k == CXCursor_Destructor) {
         // This is the "~" of a dtor. Include the next part in the link.
         state.lnkPending = true;
         return;
-    }
-    else if (tk == CXToken_Keyword
+    } else if (tk == CXToken_Keyword
         && (k == CXCursor_FunctionDecl || k == CXCursor_CXXMethod)
         && sp == "operator"
     ) {
         state.lnkPending = true;
         return;
+    } 
+
+    // Non-KWs: Avoids emitting duplicate names at least for
+    // template <typename T> using Foo = /* .. */;
+    // where both the "using" and the "Foo" were independenty linked.
+    // "{" was highlighted as definition for anonymous namespaces.
+    if (tk != CXToken_Keyword
+        && (tk != CXToken_Punctuation || (sp != "{" && sp != ";"))
+    ) {
+        SymbolDeclaration const* decl = nullptr;
+        auto const loadDecl = [&]() {
+            if (decl)
+                return;
+            decl = state.tuState.multiTuProcessor.referenceSymbol(
+                &state.hlFile,
+                lineno,
+                m->beginOffset,
+                [&]() { return fileUniqueName(cur, state.tuState.isC); });
+
+            // This dereference is safe even if other threads modify decl since
+            // it is basically just pointer arithmetic.
+            m->fileUniqueName = &decl->fileUniqueName;
+        };
+
+        if (clang_isDeclaration(k)) {
+            m->attrs |= TokenAttributes::flagDecl;
+            loadDecl();
+        }
+
+        CXCursor defcur = clang_getCursorDefinition(cur);
+        if (clang_equalCursors(defcur, cur)) { // This is a definition:
+            m->attrs |= TokenAttributes::flagDef;
+            loadDecl();
+            CgStr usr(clang_getCursorUSR(cur));
+            if (!usr.empty())
+                state.tuState.multiTuProcessor.registerDef(usr.get(), decl);
+        }
     }
 
-    SymbolDeclaration const* decl = nullptr;
-    auto const loadDecl = [&]() {
-        if (decl)
-            return;
-        decl = state.tuState.multiTuProcessor.referenceSymbol(
-            &state.hlFile,
-            lineno,
-            m->beginOffset,
-            [&]() { return fileUniqueName(cur, state.tuState.isC); });
-
-        // This dereference is safe even if other threads modify decl since it
-        // is basically just pointer arithmetic.
-        m->fileUniqueName = &decl->fileUniqueName;
-    };
-
-    if (clang_isDeclaration(k)) {
-        m->attrs |= TokenAttributes::flagDecl;
-        loadDecl();
-    }
-
-    CXCursor defcur = clang_getCursorDefinition(cur);
-    if (clang_equalCursors(defcur, cur)) { // This is a definition:
-        m->attrs |= TokenAttributes::flagDef;
-        loadDecl();
-        CgStr usr(clang_getCursorUSR(cur));
-        if (!usr.empty())
-            state.tuState.multiTuProcessor.registerDef(usr.get(), decl);
-    }
-
+    assert(m->beginOffset < m->endOffset);
     linkCursor(*m, cur, state.tuState.multiTuProcessor, state.tuState.isC);
 }
 
