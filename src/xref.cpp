@@ -256,12 +256,16 @@ std::string synth::simpleQualifiedName(CXCursor cur)
     CXCursorKind k = clang_getCursorKind(cur);
     if (clang_isInvalid(k) || clang_isTranslationUnit(k))
         return std::string();
+    CXCursor tpl = clang_getSpecializedCursorTemplate(cur);
+    CgStr name =
+            clang_equalCursors(tpl, cur)
+            || clang_isInvalid(clang_getCursorKind(tpl))
+        ? clang_getCursorSpelling(cur) : clang_getCursorDisplayName(cur);
     CXCursor parent = clang_getCursorSemanticParent(cur);
-    CgStr sp(clang_getCursorSpelling(cur));
-    if (sp.empty())
+    if (name.empty())
         return simpleQualifiedName(parent);
-    std::string name = simpleQualifiedName(parent);
-    return name.empty() ? sp.get() : std::move(name) + "::" + sp.get();
+    std::string pname = simpleQualifiedName(parent);
+    return pname.empty() ? name.get() : std::move(pname) + "::" + name.get();
 }
 
 bool synth::isNamespaceLevelDeclaration(CXCursor cur)
