@@ -112,6 +112,7 @@ static bool writeBeginTag(
     Markup const& m,
     fs::path const& outPath,
     MultiTuProcessor& multiTuProcessor,
+    bool reopened,
     std::ostream& out)
 {
     std::string href = m.isRef()
@@ -135,7 +136,7 @@ static bool writeBeginTag(
         out << '\"';
     }
     
-    if (m.fileUniqueName && !m.fileUniqueName->empty()) {
+    if (!reopened && m.fileUniqueName && !m.fileUniqueName->empty()) {
         out << " id=\""
             << htmlEscape(*m.fileUniqueName, /*inAttr:*/ true) << '\"';
     }
@@ -209,6 +210,7 @@ static bool copyWithLinenosUntil(OutputState& state, unsigned offset)
                             *mi.markup,
                             state.outPath,
                             state.multiTuProcessor,
+                            /*reopened:*/ true,
                             state.out);
                     }
                 } break;
@@ -267,7 +269,7 @@ void HighlightedFile::writeTo(
 
         copyWithLinenosUntilNoEof(state, m.beginOffset);
         bool wasRef = writeBeginTag(
-            m, state.outPath, state.multiTuProcessor, out);
+            m, state.outPath, state.multiTuProcessor, /*reopened:*/ false, out);
         activeTags.push_back({ &m, wasRef });
     }
     while (!activeTags.empty()) {
