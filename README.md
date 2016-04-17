@@ -66,6 +66,13 @@ These options are allowed:
      An interesting example Doxygen tagfile is the one for the C++ standard
      library available at
      <http://en.cppreference.com/w/Cppreference:Archives#Doxygen_tag_file>.
+  * ``--max-id-sz <n>``: By default, synth will try to link entities by name
+    instead of by line number if possible. However, this makes the HTML files
+    bigger and synth itself slower and more memory hungry. Especially for C++
+    functions with many parameters the IDs can get ridiculously long. With this
+    option you can control the maximum size (in bytes) of the IDs used. If you
+    specify ``0``, no IDs will be generated and everything will be linked by
+    line number. The default maximum size is 128 bytes.
 
 
 ### Example

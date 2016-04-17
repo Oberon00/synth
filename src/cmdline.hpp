@@ -23,6 +23,8 @@ struct CmdLineArgs {
     static CmdLineArgs parse(int argc, char const* const* argv);
 
     unsigned nThreads;
+
+    unsigned maxIdSz;
 };
 
 } // namespace synth

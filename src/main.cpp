@@ -219,6 +219,7 @@ static int executeCmdLine(CmdLineArgs const& args)
                     break;
             }
         });
+    state.setMaxIdSz(args.maxIdSz);
 
     if (args.compilationDbDir) {
         CXCompilationDatabase_Error err;
@@ -242,7 +243,7 @@ static int executeCmdLine(CmdLineArgs const& args)
         ThreadSharedState tstate {
             /*cidx=*/ hcidx.get(),
             /*multiTuProcessor=*/ state,
-            /*workindDirMut=*/ {},
+            /*workingDirMut=*/ {},
             /*outputMut=*/ {},
             /*workingDirChangedOrFree=*/ {},
             /*nWorkingDirUsers=*/ 0u,

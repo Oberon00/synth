@@ -55,6 +55,9 @@ public:
     explicit MultiTuProcessor(
         PathMap const& rootdir_, ExternalRefLinker&& refLinker);
 
+    // Not threadsafe!
+    void setMaxIdSz(std::size_t maxIdSz) { m_maxIdSz = maxIdSz; }
+
     bool isFileIncluded(fs::path const& p) const;
 
     // Returns nullptr if references to f should be ignored.
@@ -89,8 +92,11 @@ public:
 
         // Since nobody may dereference the SymbolDeclaration before
         // the single-threaded output phase, this is safe.
-        if (inserted.second) // Newly created?
-            r->fileUniqueName = std::forward<NamerFn>(namer)();
+        if (m_maxIdSz > 0 && inserted.second) { // Newly created?
+            std::string name = std::forward<NamerFn>(namer)();
+            if (name.size() <= m_maxIdSz)
+                r->fileUniqueName = std::move(name);
+        }
 
         return r;
     }
@@ -135,6 +141,9 @@ private:
     fs::path m_rootInDir;
 
     ExternalRefLinker m_refLinker;
+
+    std::size_t m_maxIdSz; // Maximum length for fileUniqueNames in m_syms.
+
 
     std::mutex m_mut;
 };

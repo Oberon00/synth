@@ -1,10 +1,13 @@
 #include "cmdline.hpp"
 
+#include <climits>
 #include <cstring>
 #include <stdexcept>
 #include <thread>
 
 using namespace synth;
+
+unsigned const kDefaultMaxIdSz = 128;
 
 static char const* getOptVal(char const* const* opt)
 {
@@ -20,11 +23,30 @@ static void getOptVal(char const* const* opt, char const*& out)
     out = getOptVal(opt);
 }
 
+static unsigned getUintOptVal(char const* const* opt)
+{
+    char const* nStr = getOptVal(opt);
+    int n;
+    try {
+        n = std::stoi(nStr);
+    } catch (std::exception const& e) {
+        throw std::runtime_error(
+            std::string("Integer expected for ") + opt[0] + ": " + e.what());
+    }
+    if (n < 0) {
+        throw std::runtime_error(
+            std::string("Value for ") + opt[0] + " must not be negative.");
+    }
+    return static_cast<unsigned>(n);
+}
+
 CmdLineArgs CmdLineArgs::parse(int argc, char const* const* argv)
 {
     if (argc < 3)
         throw std::runtime_error("Too few arguments.");
     CmdLineArgs r = {};
+    r.maxIdSz = kDefaultMaxIdSz;
+    bool maxIdSzFound = false;
     bool foundCmd = false;
     int i;
     for (i = 1; i < argc; ++i) {
@@ -37,17 +59,11 @@ CmdLineArgs CmdLineArgs::parse(int argc, char const* const* argv)
         } else if (!std::strcmp(argv[i], "-j")) {
             if (r.nThreads != 0)
                 throw std::runtime_error("Duplicate option -j.");
-            char const* nStr = getOptVal(argv + i++);
-            int n;
-            try {
-                n = std::stoi(nStr);
-            } catch (std::exception const& e) {
-                throw std::runtime_error(
-                    std::string("Bad integer for -j: ") + e.what());
-            }
-            if (n < 0)
-                throw std::runtime_error("Value for -j must not be negative");
-            r.nThreads = static_cast<unsigned>(n);
+            r.nThreads = getUintOptVal(argv + i++);
+        } else if (!std::strcmp(argv[i], "--max-id-sz")) {
+            if (maxIdSzFound)
+                throw std::runtime_error("Duplicate option --max-id-sz.");
+            r.maxIdSz = getUintOptVal(argv + i++);
         } else if (!std::strcmp(argv[i], "-o")) {
             if (r.inOutDirs.empty()) {
                 throw std::runtime_error(
@@ -90,4 +106,3 @@ CmdLineArgs CmdLineArgs::parse(int argc, char const* const* argv)
 
     return r;
 }
-
