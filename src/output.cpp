@@ -93,7 +93,7 @@ static bool writeBeginTag(
     out << '<';
 
     if (href.empty()) {
-        out << "span ";
+        out << "span";
     } else {
         out << "a href=\"" << href << "\" ";
     }
@@ -156,7 +156,7 @@ static bool copyWithLinenosUntil(OutputState& state, unsigned offset)
     while (state.in && state.in.tellg() < offset) {
         int ch = state.in.get();
         if (ch == std::istream::traits_type::eof()) {
-            state.out << "</span>\n";
+            state.out << "</span>\n"; // end tag for lineno.
             return false;
         } else {
             switch (ch) {
