@@ -11,6 +11,9 @@ namespace synth {
 TokenAttributes getTokenAttributes(
     CXToken tok, CXCursor cur, boost::string_ref tokSpelling);
 
+
+bool isTypeAliasCursorKind(CXCursorKind k);
+
 // This functions always return false for
 // MemberRef, DeclRefExpr, MemberRefExpr, UsingDeclaration, TemplateRef.
 bool isTypeCursorKind(CXCursorKind k);

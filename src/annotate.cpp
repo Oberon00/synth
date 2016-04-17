@@ -182,8 +182,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
 
     if (clang_isDeclaration(k)) {
         m->attrs |= TokenAttributes::flagDecl;
-        if (isMainCursor(cur))
-            loadDecl();
+        loadDecl();
     }
 
     CXCursor defcur = clang_getCursorDefinition(cur);

@@ -3,14 +3,49 @@
 #include "CgStr.hpp"
 #include "MultiTuProcessor.hpp"
 #include "config.hpp"
+#include "debug.hpp"
 #include "output.hpp"
 #include "highlight.hpp"
 
 #include <boost/filesystem/path.hpp>
 
+#include <iostream>
 #include <regex>
 
 using namespace synth;
+
+// A cursor is the main cursor for a declaration in its file iff:
+//  - It is a definition; or
+//  - It is the cannonical cursor (as defined by libclang) and the definition
+//    is not in the same file (≠ translation unit).
+static bool isMainCursor(CXCursor cur)
+{
+    CXCursor def = clang_getCursorDefinition(cur);
+    if (clang_equalCursors(cur, def))
+        return true;
+
+    CXCursor canon = clang_getCanonicalCursor(cur);
+    if (!clang_equalCursors(cur, canon))
+        return false;
+    CXFile defF;
+    clang_getFileLocation(
+        clang_getCursorLocation(def), &defF, nullptr, nullptr, nullptr);
+    CXFile curF;
+    clang_getFileLocation(
+        clang_getCursorLocation(canon), &curF, nullptr, nullptr, nullptr);
+    return !clang_File_isEqual(defF, curF);
+}
+
+static std::pair<bool, CXCursor> typeAliasRedeclares(CXCursor decl)
+{
+    CXType aliasTy = clang_getCursorType(decl);
+    CXType canonTy = clang_getCanonicalType(aliasTy);
+    CXCursor canonDecl = clang_getTypeDeclaration(canonTy);
+    std::string aliasQName = simpleQualifiedName(decl);
+    std::string canonQName = simpleQualifiedName(canonDecl);
+    
+    return {aliasQName == canonQName, canonDecl};
+}
 
 static std::string relativeUrl(fs::path const& from, fs::path const& to)
 {
@@ -120,8 +155,18 @@ std::string synth::fileUniqueName(CXCursor cur, bool isC)
     if (k == CXCursor_VarDecl || k == CXCursor_EnumConstantDecl)
         return simpleQualifiedName(cur);
     if (isTypeCursorKind(k)) {
-        if (!isC)
+        if (!isC) {
+            if ((k == CXCursor_TypeAliasDecl || k == CXCursor_TypedefDecl)
+                && typeAliasRedeclares(cur).first
+            ) {
+                return std::string();
+            }
             return simpleQualifiedName(cur);
+        }
+
+        std::string qname = simpleQualifiedName(cur);
+        if (qname.empty())
+            return std::string();
 
         // C allows to have struct S and another non-struct symbol S at the
         // same time. They are distinguished by writing struct in front e.g.
@@ -129,17 +174,17 @@ std::string synth::fileUniqueName(CXCursor cur, bool isC)
         // A common pattern is thus "typedef struct S { } S;" We need to make
         // sure that we handle that correctly.
         // Same goes for enum and union.
-        std::string r;
+        std::string prefix;
         SYNTH_DISCLANGWARN_BEGIN("-Wswitch-enum")
         switch (k) {
             case CXCursor_StructDecl:
-                r = 's';
+                prefix = 's';
                 break;
             case CXCursor_EnumDecl:
-                r = 'e';
+                prefix = 'e';
                 break;
             case CXCursor_UnionDecl:
-                r = 'u';
+                prefix = 'u';
                 break;
             case CXCursor_TypedefDecl:
                 break;
@@ -147,10 +192,10 @@ std::string synth::fileUniqueName(CXCursor cur, bool isC)
                 assert("unreachable" && false);
         }
         SYNTH_DISCLANGWARN_END
-        if (!r.empty())
-            r += ':';
-        r += CgStr(clang_getCursorSpelling(cur)).gets();
-        return r;
+        if (!prefix.empty())
+            prefix += ':';
+        qname.insert(0, std::move(prefix));
+        return qname;
     }
     if (isFunctionCursorKind(k)) {
         if (isC)
@@ -209,12 +254,9 @@ bool synth::isNamespaceLevelDeclaration(CXCursor cur)
         return true;
 
     CXCursorKind k = clang_getCursorKind(cur);
-    if (k != CXCursor_TypeAliasDecl
-        && k != CXCursor_TypeAliasTemplateDecl
-        && k != CXCursor_TypedefDecl
-    ) {
+    if (!isTypeAliasCursorKind(k))
         return false;
-    }
+
     // We need to walk up the parents to check if they are inside a
     // function.
     do {
@@ -226,20 +268,3 @@ bool synth::isNamespaceLevelDeclaration(CXCursor cur)
     return true;
 }
 
-bool synth::isMainCursor(CXCursor cur)
-{
-    CXCursor def = clang_getCursorDefinition(cur);
-    if (clang_equalCursors(cur, def))
-        return true;
-
-    CXCursor canon = clang_getCanonicalCursor(cur);
-    if (!clang_equalCursors(cur, canon))
-        return false;
-    CXFile defF;
-    clang_getFileLocation(
-        clang_getCursorLocation(def), &defF, nullptr, nullptr, nullptr);
-    CXFile curF;
-    clang_getFileLocation(
-        clang_getCursorLocation(canon), &curF, nullptr, nullptr, nullptr);
-    return !clang_File_isEqual(defF, curF);
-}

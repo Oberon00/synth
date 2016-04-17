@@ -12,6 +12,13 @@ using namespace synth;
 
 unsigned const kMaxRefRecursion = 16;
 
+bool synth::isTypeAliasCursorKind(CXCursorKind k)
+{
+    return k == CXCursor_TypeAliasDecl
+        || k == CXCursor_TypeAliasTemplateDecl
+        || k == CXCursor_TypedefDecl;
+}
+
 bool synth::isTypeCursorKind(CXCursorKind k)
 {
     SYNTH_DISCLANGWARN_BEGIN("-Wswitch-enum")
@@ -22,15 +29,12 @@ bool synth::isTypeCursorKind(CXCursorKind k)
         case CXCursor_StructDecl:
         case CXCursor_UnionDecl:
         case CXCursor_EnumDecl:
-        case CXCursor_TypedefDecl:
         case CXCursor_ObjCInterfaceDecl:
         case CXCursor_ObjCCategoryDecl:
         case CXCursor_ObjCProtocolDecl:
         case CXCursor_ObjCImplementationDecl:
         case CXCursor_TemplateTypeParameter:
         case CXCursor_TemplateTemplateParameter:
-        case CXCursor_TypeAliasDecl:
-        case CXCursor_TypeAliasTemplateDecl:
         case CXCursor_TypeRef:
         case CXCursor_ObjCSuperClassRef:
         case CXCursor_ObjCProtocolRef:
@@ -39,7 +43,7 @@ bool synth::isTypeCursorKind(CXCursorKind k)
             return true;
 
         default:
-            return false;
+            return isTypeAliasCursorKind(k);
     }
     SYNTH_DISCLANGWARN_END
 }
