@@ -2,12 +2,16 @@
 
 @import 'base-code.css';
 
+.highlight { background: #ffffff; }
+
 .highlight .hll, .highlight *:target { background-color: #ffffcc }
 
-
-.highlight { background: #ffffff; }
 .highlight .decl { font-weight: bold; }
 .highlight .def { font-weight: 900; }
+.highlight .nv.def, .highlight .nv.decl {
+    font-weight: inherit;
+    font-style: italic;
+}
 
 .highlight .hll { background-color: #ffffcc }
 .highlight  { background: #ffffff; }
