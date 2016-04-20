@@ -130,8 +130,6 @@ void MultiTuProcessor::writeOutput(SimpleTemplate const& tpl)
         normalAbsolute(fs::current_path()), normalAbsolute(rootOutDir));
     if (commonRoot && rootOutDir.empty())
         rootOutDir = ".";
-    if (commonRoot)
-        std::clog << "Common output root: " << rootOutDir << '\n';
     SimpleTemplate::Context ctx;
     std::clog << "Writing " << m_processedFiles.size() << " HTML files...\n";
     for (auto& fentry : m_processedFiles) {
@@ -148,8 +146,6 @@ void MultiTuProcessor::writeOutput(SimpleTemplate const& tpl)
         fs::path rootpath = fs::relative(
                 commonRoot ? rootOutDir : hlFile.inOutDir->second, hldir)
             .lexically_normal();
-        std::clog << dstPath << ": outroot=" << hlFile.inOutDir->second << 
-            " rootpath=" << rootpath << '\n';
         ctx["rootpath"] = rootpath.empty() ? "." : rootpath.string();
         tpl.writeTo(outfile, ctx);
     }
