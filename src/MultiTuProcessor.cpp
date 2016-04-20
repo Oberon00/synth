@@ -124,10 +124,13 @@ void MultiTuProcessor::writeOutput(SimpleTemplate const& tpl)
         return;
     auto it = m_dirs.begin();
     fs::path rootOutDir = it->second;
-    for (++it; it != m_dirs.end(); ++it)
+    fs::path normAbsRootOutDir = normalAbsolute(rootOutDir);
+    for (++it; it != m_dirs.end(); ++it) {
         rootOutDir = commonPrefix(rootOutDir, it->second);
-    bool commonRoot = isPathSuffix(
-        normalAbsolute(fs::current_path()), normalAbsolute(rootOutDir));
+        normAbsRootOutDir = commonPrefix(normAbsRootOutDir, normalAbsolute(it->second));
+    }
+    bool commonRoot = !normAbsRootOutDir.empty() && isPathSuffix(
+        normalAbsolute(fs::current_path()), normAbsRootOutDir);
     if (commonRoot && rootOutDir.empty())
         rootOutDir = ".";
     SimpleTemplate::Context ctx;
@@ -136,7 +139,7 @@ void MultiTuProcessor::writeOutput(SimpleTemplate const& tpl)
         auto& hlFile = fentry.second.hlFile;
         auto dstPath = hlFile.dstPath();
         auto hldir = dstPath.parent_path();
-        if (hldir != ".")
+        if (hldir != "." && !hldir.empty())
             fs::create_directories(hldir);
         std::ofstream outfile(dstPath.c_str());
         outfile.exceptions(std::ios::badbit | std::ios::failbit);
