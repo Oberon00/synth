@@ -2,6 +2,7 @@
 
 #include "CgStr.hpp"
 #include "SimpleTemplate.hpp"
+#include "basicHl.hpp"
 #include "xref.hpp"
 
 #include <boost/filesystem.hpp>
@@ -9,7 +10,6 @@
 
 #include <algorithm>
 #include <climits>
-#include <fstream>
 #include <iostream>
 
 using namespace synth;
@@ -141,16 +141,47 @@ void MultiTuProcessor::writeOutput(SimpleTemplate const& tpl)
         auto hldir = dstPath.parent_path();
         if (hldir != "." && !hldir.empty())
             fs::create_directories(hldir);
-        std::ofstream outfile(dstPath.c_str());
-        outfile.exceptions(std::ios::badbit | std::ios::failbit);
-        ctx["code"] = SimpleTemplate::ValCallback(std::bind(
-            &HighlightedFile::writeTo, &hlFile, std::placeholders::_1, std::ref(*this)));
-        ctx["filename"] = hlFile.fname.string();
-        fs::path rootpath = fs::relative(
-                commonRoot ? rootOutDir : hlFile.inOutDir->second, hldir)
-            .lexically_normal();
-        ctx["rootpath"] = rootpath.empty() ? "." : rootpath.string();
-        tpl.writeTo(outfile, ctx);
+        sortMarkups(hlFile.markups);
+        fs::ifstream srcfile(hlFile.srcPath(), std::ios::binary);
+        fs::ofstream outfile;
+        try {
+            srcfile.exceptions(std::ios::badbit);
+            std::vector<Markup> suppMarkups;
+            basicHighlightFile(srcfile, suppMarkups);
+            sortMarkups(suppMarkups);
+            hlFile.supplementMarkups(suppMarkups);
+            srcfile.clear();
+            srcfile.seekg(0);
+            outfile.open(dstPath, std::ios::binary);
+            outfile.exceptions(std::ios::badbit | std::ios::failbit);
+            ctx["code"] = SimpleTemplate::ValCallback(std::bind(
+                &HighlightedFile::writeTo,
+                &hlFile,
+                std::placeholders::_1,
+                std::ref(*this),
+                std::ref(srcfile)));
+            ctx["filename"] = hlFile.fname.string();
+            fs::path rootpath = fs::relative(
+                    commonRoot ? rootOutDir : hlFile.inOutDir->second, hldir)
+                .lexically_normal();
+            ctx["rootpath"] = rootpath.empty() ? "." : rootpath.string();
+            tpl.writeTo(outfile, ctx);
+        } catch (std::ios::failure& e) {
+            if (!srcfile) {
+                throw std::runtime_error(
+                    "Error reading from or opening "
+                    + hlFile.srcPath().string()
+                    + ": " + e.what());
+            }
+            if (!outfile) {
+                throw std::runtime_error(
+                    "Error writing to or opening "
+                    + hlFile.dstPath().string()
+                    + ": " + e.what());
+            }
+            assert("ios::failure but no file with badbit or failbit" && false);
+            throw;
+        }
     }
 }
 

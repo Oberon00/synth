@@ -133,8 +133,15 @@ struct HighlightedFile {
     fs::path dstPath() const;
     fs::path srcPath() const { return inOutDir->first / fname; }
 
-    void writeTo(std::ostream& out, MultiTuProcessor& multiTuProcessor);
+    void supplementMarkups(std::vector<Markup> const& supplementary);
+    void writeTo(
+        std::ostream& out,
+        MultiTuProcessor& multiTuProcessor,
+        std::ifstream& selfIn) const;
 };
+
+ // Must be called before writeTo() or supplementMarkups()
+void sortMarkups(std::vector<Markup>& markups);
 
 inline std::string lineId(unsigned lineno)
 {

@@ -237,26 +237,58 @@ static void copyWithLinenosUntilNoEof(OutputState& state, unsigned offset)
     }
 }
 
-void HighlightedFile::writeTo(
-    std::ostream& out, MultiTuProcessor& multiTuProcessor)
+// ORDER BY beginOffset ASC, endOffset DESC
+static bool rangeLessThan(Markup const& lhs, Markup const& rhs)
 {
-    // ORDER BY beginOffset ASC, endOffset DESC
-    std::sort(
-        markups.begin(), markups.end(),
-        [] (Markup const& lhs, Markup const& rhs) {
-            return lhs.beginOffset != rhs.beginOffset
-                ? lhs.beginOffset < rhs.beginOffset
-                : lhs.endOffset > rhs.endOffset;
-        });
+    return lhs.beginOffset != rhs.beginOffset
+        ? lhs.beginOffset < rhs.beginOffset
+        : lhs.endOffset > rhs.endOffset;
+}
 
-    fs::path outPath = dstPath();
-    fs::ifstream in(srcPath(), std::ios::binary);
-    if (!in) {
-        throw std::runtime_error(
-            "Could not reopen source " + srcPath().string());
+static bool rangesOverlap(Markup const& lhs, Markup const& rhs)
+{
+    return lhs.beginOffset < rhs.endOffset
+        && rhs.beginOffset < lhs.endOffset;
+}
+
+void synth::sortMarkups(std::vector<Markup>& markups)
+{
+    std::sort(markups.begin(), markups.end(), &rangeLessThan);
+}
+
+void synth::HighlightedFile::supplementMarkups(
+    std::vector<Markup> const& supplementary)
+{
+    std::size_t i = 0;
+    unsigned nextSupps = 0;
+    for (auto const& supp : supplementary) {
+        while (i < markups.size() && markups[i].endOffset < supp.beginOffset) {
+            ++i;
+            i += nextSupps;
+            nextSupps = 0;
+        }
+        if (i >= markups.size()) {
+            markups.push_back(supp);
+        } else if (!rangesOverlap(supp, markups[i])) {
+            bool const before = rangeLessThan(supp, markups[i]);
+            // Silence clang warning.
+            auto idiff = static_cast<std::vector<Markup>::difference_type>(i)
+                + (before ? 0 : 1);
+            markups.insert(markups.begin() + idiff, supp);
+            if (before)
+                ++i;
+            else
+                ++nextSupps;
+        }
     }
+}
+
+void HighlightedFile::writeTo(
+    std::ostream& out, MultiTuProcessor& multiTuProcessor, std::ifstream& selfIn) const
+{
+    fs::path outPath = dstPath();
     std::vector<MarkupInfo> activeTags;
-    OutputState state {in, out, 0, activeTags, outPath, multiTuProcessor};
+    OutputState state {selfIn, out, 0, activeTags, outPath, multiTuProcessor};
     for (auto const& m : markups) {
         while (!activeTags.empty()
             && m.beginOffset >= activeTags.back().markup->endOffset
