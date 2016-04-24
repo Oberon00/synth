@@ -52,7 +52,7 @@ MultiTuProcessor::MultiTuProcessor(
     m_rootInDir = dirs.begin()->first;
     for (auto const& kv : dirs) {
         fs::path inDir = normalAbsolute(kv.first);
-        m_dirs.push_back({inDir, kv.second});
+        m_dirs.push_back({inDir, normalAbsolute(kv.second)});
         m_rootInDir = commonPrefix(std::move(m_rootInDir), inDir);
     }
 }
@@ -124,13 +124,10 @@ void MultiTuProcessor::writeOutput(SimpleTemplate const& tpl)
         return;
     auto it = m_dirs.begin();
     fs::path rootOutDir = it->second;
-    fs::path normAbsRootOutDir = normalAbsolute(rootOutDir);
-    for (++it; it != m_dirs.end(); ++it) {
+    for (++it; it != m_dirs.end(); ++it)
         rootOutDir = commonPrefix(rootOutDir, it->second);
-        normAbsRootOutDir = commonPrefix(normAbsRootOutDir, normalAbsolute(it->second));
-    }
-    bool commonRoot = !normAbsRootOutDir.empty() && isPathSuffix(
-        normalAbsolute(fs::current_path()), normAbsRootOutDir);
+    bool commonRoot = !rootOutDir.empty() && isPathSuffix(
+        normalAbsolute(fs::current_path()), rootOutDir);
     if (commonRoot && rootOutDir.empty())
         rootOutDir = ".";
     SimpleTemplate::Context ctx;
