@@ -55,51 +55,20 @@ public:
     explicit MultiTuProcessor(
         PathMap const& rootdir_, ExternalRefLinker&& refLinker);
 
-    // Not threadsafe!
-    void setMaxIdSz(std::size_t maxIdSz) { m_maxIdSz = maxIdSz; }
+    // Setter is not threadsafe!
+    void setMaxIdSz(std::size_t maxIdSz) noexcept { m_maxIdSz = maxIdSz; }
+    std::size_t maxIdSz() const noexcept { return m_maxIdSz; }
 
     bool isFileIncluded(fs::path const& p) const;
 
     // Returns nullptr if references to f should be ignored.
     // Pass 0 for lineno and UINT_MAX for offset if referencing
     // the file as a whole.
-    template <typename NamerFn>
     SymbolDeclaration const* referenceSymbol(
-        CXFile f, unsigned lineno, unsigned offset,
-        NamerFn&& namer)
-    {
-        FileEntry* fentry = obtainFileEntry(f);
-        if (!fentry)
-            return nullptr;
-        return referenceSymbol(
-            &fentry->hlFile, lineno, offset, std::forward<NamerFn>(namer));
-    }
+        CXFile f, unsigned lineno, unsigned offset);
 
-    template <typename NamerFn>
-    SymbolDeclaration const* referenceSymbol(
-        HighlightedFile const* hlFile, unsigned lineno, unsigned offset,
-        NamerFn&& namer)
-    {
-        std::pair<SymbolMap::iterator, bool> inserted;
-        {
-            std::lock_guard<std::mutex> lock(m_mut);
-            inserted = m_syms.insert({
-                SymbolId{hlFile, offset},
-                SymbolDeclaration{hlFile, lineno, std::string()} });
-        }
-
-        SymbolDeclaration* r = &inserted.first->second;
-
-        // Since nobody may dereference the SymbolDeclaration before
-        // the single-threaded output phase, this is safe.
-        if (m_maxIdSz > 0 && inserted.second) { // Newly created?
-            std::string name = std::forward<NamerFn>(namer)();
-            if (name.size() <= m_maxIdSz)
-                r->fileUniqueName = std::move(name);
-        }
-
-        return r;
-    }
+    SymbolDeclaration& createSymbol(
+        HighlightedFile const& hlFile, unsigned lineno, unsigned offset);
 
     HighlightedFile* prepareToProcess(CXFile f);
 

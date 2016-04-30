@@ -62,6 +62,33 @@ bool MultiTuProcessor::isFileIncluded(fs::path const& p) const
     return getFileMapping(p) != nullptr;
 }
 
+// Returns nullptr if references to f should be ignored.
+// Pass 0 for lineno and UINT_MAX for offset if referencing
+// the file as a whole.
+
+SymbolDeclaration const* synth::MultiTuProcessor::referenceSymbol(
+    CXFile f, unsigned lineno, unsigned offset)
+{
+    FileEntry* fentry = obtainFileEntry(f);
+    if (!fentry)
+        return nullptr;
+    return &createSymbol(fentry->hlFile, lineno, offset);
+}
+
+SymbolDeclaration& synth::MultiTuProcessor::createSymbol(
+    HighlightedFile const& hlFile, unsigned lineno, unsigned offset)
+{
+    std::pair<SymbolMap::iterator, bool> inserted;
+    {
+        std::lock_guard<std::mutex> lock(m_mut);
+        inserted = m_syms.insert({
+            SymbolId{ &hlFile, offset },
+            SymbolDeclaration{ &hlFile, lineno, std::string() } });
+    }
+
+    return inserted.first->second;
+}
+
 PathMap::value_type const* MultiTuProcessor::getFileMapping(
     fs::path const& p) const
 {

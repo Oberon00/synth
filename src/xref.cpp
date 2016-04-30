@@ -100,21 +100,19 @@ static void linkSymbol(Markup& m, SymbolDeclaration const* sym)
     };
 }
 
-static void linkDeclCursor(Markup& m, CXCursor decl, MultiTuProcessor& state, bool isC)
+static void linkDeclCursor(Markup& m, CXCursor decl, MultiTuProcessor& state)
 {
     CXFile file;
     unsigned lineno, offset;
     clang_getFileLocation(
         clang_getCursorLocation(decl), &file, &lineno, nullptr, &offset);
-    linkSymbol(m, state.referenceSymbol(
-        file, lineno, offset, [&]() { return fileUniqueName(decl, isC); }));
+    linkSymbol(m, state.referenceSymbol(file, lineno, offset));
 }
 
 static void linkInclude(Markup& m, CXCursor incCursor, MultiTuProcessor& state)
 {
     CXFile file = clang_getIncludedFile(incCursor);
-    linkSymbol(m, state.referenceSymbol(
-        file, 0, UINT_MAX, []() { return std::string(); }));
+    linkSymbol(m, state.referenceSymbol(file, 0, UINT_MAX));
 }
 
 static void linkExternalDef(Markup& m, CXCursor cur, MultiTuProcessor& state)
@@ -135,7 +133,7 @@ static void linkExternalDef(Markup& m, CXCursor cur, MultiTuProcessor& state)
     };
 }
 
-void synth::linkCursor(Markup& m, CXCursor cur, MultiTuProcessor& state, bool isC)
+void synth::linkCursor(Markup& m, CXCursor cur, MultiTuProcessor& state)
 {
     CXCursorKind k = clang_getCursorKind(cur);
     bool shouldRef = false;
@@ -149,7 +147,8 @@ void synth::linkCursor(Markup& m, CXCursor cur, MultiTuProcessor& state, bool is
             && !clang_equalCursors(cur, referenced);
         shouldRef = isref;
         if (isref) {
-            linkDeclCursor(m, referenced, state, isC);
+            CgStr sp = clang_getCursorSpelling(referenced);
+            linkDeclCursor(m, referenced, state);
         } else if (
             (m.attrs & (TokenAttributes::flagDef | TokenAttributes::flagDecl))
             != TokenAttributes::none
@@ -160,8 +159,17 @@ void synth::linkCursor(Markup& m, CXCursor cur, MultiTuProcessor& state, bool is
         }
     }
 
-    if (shouldRef && !m.isRef())
-        state.linkExternalRef(m, std::move(cur));
+    if (!shouldRef || m.isRef())
+        return;
+    state.linkExternalRef(m, std::move(cur));
+    if (m.isRef())
+        return;
+    CXCursor specialized = clang_getSpecializedCursorTemplate(cur);
+    if (!clang_Cursor_isNull(specialized)
+        && !clang_equalCursors(cur, specialized)
+    ) {
+        linkDeclCursor(m, specialized, state);
+    }
 }
 
 std::string synth::fileUniqueName(CXCursor cur, bool isC)

@@ -145,8 +145,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
         CXSourceRange incrng = clang_getCursorExtent(cur);
         incLnk.beginOffset = getLocOffset(clang_getRangeStart(incrng));
         incLnk.endOffset = getLocOffset(clang_getRangeEnd(incrng));
-        linkCursor(
-            incLnk, cur, state.tuState.multiTuProcessor, state.tuState.isC);
+        linkCursor(incLnk, cur, state.tuState.multiTuProcessor);
         if (incLnk.isRef())
             state.hlFile.markups.push_back(std::move(incLnk));
         return;
@@ -169,19 +168,24 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
     if (tk != CXToken_Keyword
         && (tk != CXToken_Punctuation || (sp != "{" && sp != ";"))
     ) {
-        SymbolDeclaration const* decl = nullptr;
+        SymbolDeclaration* decl = nullptr;
         auto const loadDecl = [&]() {
             if (decl)
                 return;
-            decl = state.tuState.multiTuProcessor.referenceSymbol(
-                &state.hlFile,
+            decl = &state.tuState.multiTuProcessor.createSymbol(
+                state.hlFile,
                 lineno,
-                m->beginOffset,
-                [&]() { return fileUniqueName(cur, state.tuState.isC); });
+                m->beginOffset);
 
-            // This dereference is safe even if other threads modify decl since
-            // it is basically just pointer arithmetic.
-            m->fileUniqueName = &decl->fileUniqueName;
+            assert(decl->fileUniqueName.empty());
+            std::size_t maxIdSz = state.tuState.multiTuProcessor.maxIdSz();
+            if (maxIdSz > 0) {
+                std::string name = fileUniqueName(cur, state.tuState.isC);
+                if (name.size() < maxIdSz) {
+                    decl->fileUniqueName = std::move(name);
+                    m->fileUniqueName = &decl->fileUniqueName;
+                }
+            }
         };
 
         if (clang_isDeclaration(k)) {
@@ -200,7 +204,7 @@ static void processToken(FileState& state, CXToken tok, CXCursor cur)
     }
 
     assert(m->beginOffset < m->endOffset);
-    linkCursor(*m, cur, state.tuState.multiTuProcessor, state.tuState.isC);
+    linkCursor(*m, cur, state.tuState.multiTuProcessor);
 }
 
 static CXChildVisitResult annotateVisit(

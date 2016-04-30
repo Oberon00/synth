@@ -9,7 +9,7 @@ namespace synth {
 struct Markup;
 class MultiTuProcessor;
 
-void linkCursor(Markup& m, CXCursor mcur, MultiTuProcessor& state, bool isC);
+void linkCursor(Markup& m, CXCursor mcur, MultiTuProcessor& state);
 std::string fileUniqueName(CXCursor cur, bool isC);
 std::string simpleQualifiedName(CXCursor cur);
 
