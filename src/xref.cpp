@@ -179,8 +179,6 @@ std::string synth::fileUniqueName(CXCursor cur, bool isC)
     if (!isMainCursor(cur))
         return std::string();
     CXCursorKind k = clang_getCursorKind(cur);
-    if (k == CXCursor_VarDecl || k == CXCursor_EnumConstantDecl)
-        return simpleQualifiedName(cur);
     if (isTypeCursorKind(k)) {
         if (!isC) {
             if ((k == CXCursor_TypeAliasDecl || k == CXCursor_TypedefDecl)
@@ -256,7 +254,7 @@ std::string synth::fileUniqueName(CXCursor cur, bool isC)
         }
         return r;
     }
-    return std::string();
+    return simpleQualifiedName(cur);
 }
 
 std::string synth::simpleQualifiedName(CXCursor cur)
@@ -270,8 +268,13 @@ std::string synth::simpleQualifiedName(CXCursor cur)
             || clang_isInvalid(clang_getCursorKind(tpl))
         ? clang_getCursorSpelling(cur) : clang_getCursorDisplayName(cur);
     CXCursor parent = clang_getCursorSemanticParent(cur);
-    if (name.empty())
-        return simpleQualifiedName(parent);
+    if (name.empty()) {
+        if (isTypeCursorKind(k)) {
+            name = clang_getTypeSpelling(clang_getCursorType(cur));
+        }
+        if (name.empty())
+            return simpleQualifiedName(parent);
+    }
     std::string pname = simpleQualifiedName(parent);
     return pname.empty() ? name.get() : std::move(pname) + "::" + name.get();
 }
