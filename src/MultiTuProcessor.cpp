@@ -163,7 +163,7 @@ void MultiTuProcessor::writeOutput(SimpleTemplate const& tpl)
                 .lexically_normal();
             ctx["rootpath"] = rootpath.empty() ? "." : rootpath.string();
             tpl.writeTo(outfile, ctx);
-        } catch (std::ios::failure& e) {
+        } catch (std::ios::failure const& e) {
             if (!srcfile) {
                 throw std::runtime_error(
                     "Error reading from or opening "
