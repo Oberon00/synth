@@ -216,12 +216,12 @@ static CXChildVisitResult annotateVisit(
         state.isC = lang == CXLanguage_C || lang == CXLanguage_Invalid;
     }
     CXFile f;
-    unsigned off;
+    unsigned ln, off;
     clang_getFileLocation(
-        clang_getCursorLocation(c), &f, nullptr, nullptr, &off);
+        clang_getCursorLocation(c), &f, &ln, nullptr, &off);
     FileAnnotationState* astate = lookupFileAnnotations(state.annotationMap, f);
     if (!astate)
-        return CXChildVisit_Continue; // Should we use Recurse here?
+        return ln == 0 ? CXChildVisit_Recurse : CXChildVisit_Continue;
 
     auto itIdx = astate->locationMap.find(off);
     if (itIdx == astate->locationMap.end()
