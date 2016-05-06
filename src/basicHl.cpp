@@ -110,20 +110,13 @@ static void skipUntilAfter(CharStream& chs, boost::string_ref s)
     }
 }
 
-static char skipUntilAny(
-    CharStream& chs, char const* s, char const** pFoundCh = nullptr)
+static char skipUntilAny(CharStream& chs, char const* s)
 {
     char ch;
     while (chs.get(ch)) {
-        const char* foundCh = std::strchr(s, ch);
-        if (foundCh) {
-            if (pFoundCh)
-                *pFoundCh = foundCh;
+        if (std::strchr(s, ch))
             return ch;
-        }
     }
-    if (pFoundCh)
-        *pFoundCh = nullptr;
     return '\0';
 }
 
@@ -147,21 +140,27 @@ static Markup& markTillHere(HlState state, unsigned beg) {
     return createMarkup(state.out, beg, state.in.tellg());
 }
 
+static void skipQuotes(CharStream& chs, char quote)
+{
+    char delims[] = {'\\', quote, '\0'};
+    for (;;) {
+        char foundCh = skipUntilAny(chs, delims);
+        if (!foundCh || foundCh == quote)
+            break;
+        if (foundCh == '\\' && !chs.get(foundCh))
+            break;
+    }
+}
+
 static bool hlStringNoPrefix(HlState& state, unsigned beg)
 {
     char ch;
     if (!state.in.peek(ch))
         return false;
-    if (ch == '"') {
+    if (ch == '"' || ch == '\'') {
         BOOST_VERIFY(state.in.get(ch));
-        char const* foundCh;
-        for (;;) {
-            skipUntilAny(state.in, "\"\\", &foundCh);
-            if (!foundCh || *foundCh == '"') {
-                markTillHere(state, beg).attrs = TokenAttributes::litStr;
-                return true;
-            }
-        }
+        skipQuotes(state.in, ch);
+        return true;
     } else if (ch == 'R') {
         BOOST_VERIFY(state.in.get(ch));
         if (!state.in.peek(ch) || ch != '"') {
@@ -241,6 +240,7 @@ static void hlAdvance(char ch, HlState& state)
         case '/':
             hlComment(state);
             break;
+        case '\'':
         case '"':
             state.in.unget(ch);
             hlString(state);
