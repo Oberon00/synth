@@ -125,6 +125,7 @@ static TokenAttributes getTokenAttributesImpl(
 {
     CXCursorKind k = clang_getCursorKind(cur);
     CXTokenKind tk = clang_getTokenKind(tok);
+
     if (clang_isPreprocessing(k)) {
         if (k == CXCursor_InclusionDirective && sp != "include" && sp != "#")
             return TokenAttributes::preIncludeFile;
@@ -186,36 +187,6 @@ static TokenAttributes getTokenAttributesImpl(
                 return TokenAttributes::func;
             SYNTH_DISCLANGWARN_BEGIN("-Wswitch-enum")
             switch (k) {
-                case CXCursor_MemberRef:
-                case CXCursor_DeclRefExpr:
-                case CXCursor_MemberRefExpr:
-                case CXCursor_UsingDeclaration:
-                case CXCursor_TemplateRef: {
-                    CXCursor refd = clang_getCursorReferenced(cur);
-                    bool recErr = recursionDepth > kMaxRefRecursion;
-                    if (recErr) {
-                        CgStr kindSp(clang_getCursorKindSpelling(k));
-                        CgStr rKindSp(clang_getCursorKindSpelling(
-                                clang_getCursorKind(refd)));
-                        std::clog << "When trying to highlight token "
-                                << clang_getTokenExtent(tu, tok) << " "
-                                << sp << ":\n"
-                                << "  Cursor " << clang_getCursorExtent(cur)
-                                << " " << kindSp << " references "
-                                << clang_getCursorExtent(refd)
-                                << " " << rKindSp
-                                << "  Maximum depth exceeded with "
-                                << recursionDepth << ".\n";
-                        return TokenAttributes::none;
-                    }
-
-                    if (clang_equalCursors(cur, refd))
-                        return TokenAttributes::none;
-
-                    return getTokenAttributesImpl(
-                        tok, refd, sp, tu, recursionDepth + 1);
-                }
-
                 case CXCursor_ObjCPropertyDecl:
                     return TokenAttributes::varNonstaticMember; // Sorta right.
 
@@ -241,10 +212,33 @@ static TokenAttributes getTokenAttributesImpl(
                 case CXCursor_LabelStmt:
                     return TokenAttributes::lbl;
 
-                default:
+                default: {
                     if (clang_isAttribute(k))
                         return TokenAttributes::attr;
-                    return TokenAttributes::none;
+                    CXCursor refd = clang_getCursorReferenced(cur);
+                    bool recErr = recursionDepth > kMaxRefRecursion;
+                    if (recErr) {
+                        CgStr kindSp(clang_getCursorKindSpelling(k));
+                        CgStr rKindSp(clang_getCursorKindSpelling(
+                                clang_getCursorKind(refd)));
+                        std::clog << "When trying to highlight token "
+                                << clang_getTokenExtent(tu, tok) << " "
+                                << sp << ":\n"
+                                << "  Cursor " << clang_getCursorExtent(cur)
+                                << " " << kindSp << " references "
+                                << clang_getCursorExtent(refd)
+                                << " " << rKindSp
+                                << "  Maximum depth exceeded with "
+                                << recursionDepth << ".\n";
+                        return TokenAttributes::none;
+                    }
+
+                    if (clang_equalCursors(cur, refd))
+                        return TokenAttributes::none;
+
+                    return getTokenAttributesImpl(
+                        tok, refd, sp, tu, recursionDepth + 1);
+                }
             }
     }
     SYNTH_DISCLANGWARN_END
