@@ -248,8 +248,8 @@ static void hlAdvance(char ch, HlState& state)
         default:
             // TODO: Here we assume (a) that the encoding is ASCII-compatible and
             // (b) that all non-ascii characters are identifier characters.
-            // Ideally we would need get() to return the next Unicode Codepoint and
-            // then decide base on
+            // Ideally, get() should return the next Unicode codepoint so that
+            // we could then decide based on that.
             if (ch >= 0 && ch <= 127
                 && (std::strchr(kAsciiIdChars, ch) || ch == '\\')
             ) {
