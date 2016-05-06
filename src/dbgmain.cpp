@@ -7,7 +7,6 @@
 
 using namespace synth;
 
-static char const kTokenKindChrs[] = "pkilc";
 static char const* const kLinkageSpellings[] = {
     "Invalid",
     "NoLinkage",
@@ -21,15 +20,6 @@ static char const* const kLangSpellings[] = {
     "ObjC",
     "C++"
 };
-
-static void dumpToken(
-    CXTranslationUnit tu, CXToken tok, CXFile f = nullptr)
-{
-    std::clog << kTokenKindChrs[clang_getTokenKind(tok)] << ' ';
-    std::clog << '"' << CgStr(clang_getTokenSpelling(tu, tok)) << "\" ";
-    CXSourceRange tokExt = clang_getTokenExtent(tu, tok);
-    writeExtent(std::clog, tokExt, f);
-}
 
 // Returns decl
 static std::pair<CXType, CXCursor> dumpType(CXType ty, CXCursor ref)
@@ -57,7 +47,7 @@ static void dumpAnnotatedToken(
     bool extrainfo,
     CXFile f = nullptr)
 {
-    dumpToken(tu, tok, f);
+    writeToken(std::clog, tok, tu, f);
     std::clog << '\t';
     dumpSingleCursor(cur, 0, f);
     if (extrainfo) {
@@ -116,7 +106,7 @@ static void dumpTokens(CXCursor root, bool annotate, bool extrainfo)
             }
         } else {
             for (unsigned i = 0; i < numTokens; ++i) {
-                dumpToken(tu, tokens[i], f);
+                writeToken(std::clog, tokens[i], tu, f);
                 std::clog << '\n';
             }
         }

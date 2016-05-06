@@ -13,6 +13,7 @@ void dumpSingleCursor(CXCursor c, int ind = 0, CXFile f = nullptr);
 void dumpAst(CXCursor c, int ind = 0);
 void writeLoc(std::ostream& out, CXSourceLocation loc, CXFile f = nullptr);
 void writeExtent(std::ostream& out, CXSourceRange rng, CXFile f = nullptr);
+void writeToken(std::ostream& out, CXToken tok, CXTranslationUnit tu, CXFile f = nullptr);
 std::ostream& operator<< (std::ostream& out, CXCursor c);
 std::ostream& operator<< (std::ostream& out, CXSourceRange rng);
 
