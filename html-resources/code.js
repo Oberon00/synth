@@ -70,6 +70,7 @@
     // ADD STYLES HERE (display-name, filename): //
     sel.add(new Option('colorful', 'codestyle-colorful'));
     sel.add(new Option('vs', 'codestyle-vs'));
+    sel.add(new Option('gruvbox', 'codestyle-gruvbox'));
 
     sel.onchange = function() {
         updateSelectedStyle();
