@@ -68,8 +68,8 @@
     var sel = document.createElement('select');
 
     // ADD STYLES HERE (display-name, filename): //
-    sel.add(new Option('colorful', 'code'));
-    sel.add(new Option('vs', 'code-simple'));
+    sel.add(new Option('colorful', 'codestyle-colorful'));
+    sel.add(new Option('vs', 'codestyle-vs'));
 
     sel.onchange = function() {
         updateSelectedStyle();
