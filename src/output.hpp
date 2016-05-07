@@ -130,6 +130,8 @@ struct HighlightedFile {
 
     std::vector<Markup> markups;
 
+    std::vector<std::pair<unsigned, unsigned>> disabledLines;
+
     fs::path dstPath() const;
     fs::path srcPath() const { return inOutDir->first / fname; }
 

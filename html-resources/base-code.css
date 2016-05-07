@@ -13,3 +13,7 @@
     display: inline-block;
     width: 100%;
 }
+
+.disabled-code {
+    opacity: 0.5;
+}

@@ -159,6 +159,8 @@ struct OutputState {
     unsigned lineno;
     std::vector<MarkupInfo> const& activeTags;
     fs::path const& outPath;
+    std::vector<std::pair<unsigned, unsigned>> const& disabledLines;
+    std::size_t disabledLineIdx;
     MultiTuProcessor& multiTuProcessor;
 };
 
@@ -183,11 +185,21 @@ static void writeAllEnds(
         writeEndTag(*rit, out);
 }
 
+static void writeLineStart(OutputState& state)
+{
+    if (state.disabledLineIdx < state.disabledLines.size()
+        && state.disabledLines[state.disabledLineIdx].first == state.lineno
+    ) {
+        state.out << "<div class=\"disabled-code\">";
+    }
+    state.out << "<span id=\"" << lineId(state.lineno) << "\" class=\"Ln\">";
+}
+
 static bool copyWithLinenosUntil(OutputState& state, unsigned offset)
 {
     if (state.lineno == 0) {
         ++state.lineno;
-        state.out << "<span id=\"" << lineId(1) << "\" class=\"Ln\">";
+        writeLineStart(state);
     }
 
     while (state.in && state.in.tellg() < offset) {
@@ -200,10 +212,16 @@ static bool copyWithLinenosUntil(OutputState& state, unsigned offset)
                 case '\n': {
                     writeAllEnds(state.out, state.activeTags);
                     ++state.lineno;
-                    state.out
-                        << "</span>\n<span id=\"" 
-                        << lineId(state.lineno)
-                        << "\" class=\"Ln\">";
+                    state.out << "</span>";
+                    if (state.disabledLineIdx < state.disabledLines.size()
+                        && state.disabledLines[state.disabledLineIdx].second
+                            == state.lineno
+                    ) {
+                        state.out << "</div>";
+                        ++state.disabledLineIdx;
+                    }
+                    state.out << '\n';
+                    writeLineStart(state);
 
                     for (auto const& mi : state.activeTags) {
                         writeBeginTag(
@@ -288,7 +306,16 @@ void HighlightedFile::writeTo(
 {
     fs::path outPath = dstPath();
     std::vector<MarkupInfo> activeTags;
-    OutputState state {selfIn, out, 0, activeTags, outPath, multiTuProcessor};
+    OutputState state {
+        selfIn,
+        out,
+        0,
+        activeTags,
+        outPath,
+        disabledLines,
+        0,
+        multiTuProcessor
+    };
     for (auto const& m : markups) {
         while (!activeTags.empty()
             && m.beginOffset >= activeTags.back().markup->endOffset

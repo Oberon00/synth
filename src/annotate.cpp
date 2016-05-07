@@ -282,6 +282,26 @@ static void processFile(
         }
     }
 
+    CgSourceRangesHandle skippedRanges(clang_getSkippedRanges(tu, file));
+    for (unsigned i = 0; i < skippedRanges->count; ++i) {
+        CXSourceRange rng = skippedRanges->ranges[i];
+        std::pair<unsigned, unsigned> skippedRng;
+        clang_getFileLocation(
+            clang_getRangeStart(rng),
+            nullptr,
+            &skippedRng.first,
+            nullptr,
+            nullptr);
+        clang_getFileLocation(
+            clang_getRangeEnd(rng),
+            nullptr,
+            &skippedRng.second,
+            nullptr,
+            nullptr);
+        hlFile->disabledLines.push_back(skippedRng);
+    }
+    std::sort(hlFile->disabledLines.begin(), hlFile->disabledLines.end());
+
     FileAnnotationState fstate {
         std::move(file),
         *hlFile,
@@ -294,6 +314,7 @@ static void processFile(
     auto insRes = state.annotationMap.insert(std::move(kv));
     assert(insRes.second);
     insRes.first->second.populateLocationMap(tu);
+
 }
 
 static void writeHlTokens(TuState& state)

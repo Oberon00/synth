@@ -60,15 +60,15 @@ private:
     CXTranslationUnit m_tu;
 };
 
-#define SYNTH_DEF_DELETER(t, f)               \
-    struct DeleterFor##t {                    \
+#define SYNTH_DEF_DELETER(n, t, f)               \
+    struct DeleterFor##n {                    \
         void operator() (t v) const { f(v); } \
     };
 
 #define SYNTH_DEF_HANDLE(n, t, delf) \
-    SYNTH_DEF_DELETER(t, delf)       \
+    SYNTH_DEF_DELETER(n, t, delf)       \
     using n = std::unique_ptr<       \
-        std::remove_pointer_t<t>, DeleterFor##t>;
+        std::remove_pointer_t<t>, DeleterFor##n>;
 
 SYNTH_DEF_HANDLE(CgIdxHandle, CXIndex, clang_disposeIndex)
 SYNTH_DEF_HANDLE(CgTuHandle, CXTranslationUnit, clang_disposeTranslationUnit)
@@ -76,6 +76,7 @@ SYNTH_DEF_HANDLE(
     CgDbHandle, CXCompilationDatabase, clang_CompilationDatabase_dispose)
 SYNTH_DEF_HANDLE(
     CgCmdsHandle, CXCompileCommands, clang_CompileCommands_dispose)
+SYNTH_DEF_HANDLE(CgSourceRangesHandle, CXSourceRangeList*, clang_disposeSourceRangeList)
 } // namespace synth
 
 #endif // SYNTH_CGWRAPPERS_HPP_INCLUDED
